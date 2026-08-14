@@ -1,3 +1,4 @@
+from urllib.parse import _ResultStrT
 import time
 import random
 import sqlite3
@@ -29,3 +30,33 @@ def products_fast() :
     return {
         "products" : [{"id" : r[0], "name" : r[1], "price" : r[2]} for r in rows]
     }
+@app.get("/products-n-plus-one")
+def products_n_plus_one() :
+    conn = sqlite3.connect("store.db")
+    curr = conn.cursor()
+    curr.execute("SELECT id FROM products")
+    ids = [r[0] for r in curr.fetchone()]
+    conn.close()
+    results = []
+    for pid in ids :
+        c2 = sqlite3.connect("store.db")
+        curr2 = c2.cursor()
+        curr2.execute("SELECT name, price FROM products WHERE id = ?", (pid))
+        row = curr2.fetchone()
+        c2.close()
+        if row :
+            results.append({"id" : pid, "name" : row[0], "price" : row[1]})
+        return {
+            "products" : results
+        }
+@app.get("/slow-blocking")
+def slow_blocking() :
+    time.sleep(1.5)
+    return{
+        "stauts" : "done but after a sleep time"
+    }
+@app.get("/random-fail")
+def random_fail() :
+    if random.random() < 0.2 :
+        raise Exception("Simulated random failure")
+    return {"status" : "ok"}
