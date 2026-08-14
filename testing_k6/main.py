@@ -1,4 +1,3 @@
-from urllib.parse import _ResultStrT
 import time
 import random
 import sqlite3
