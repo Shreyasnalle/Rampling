@@ -34,7 +34,7 @@ def products_n_plus_one() :
     conn = sqlite3.connect("store.db")
     curr = conn.cursor()
     curr.execute("SELECT id FROM products")
-    ids = [r[0] for r in curr.fetchone()]
+    ids = [r[0] for r in curr.fetchall()]
     conn.close()
     results = []
     for pid in ids :
