@@ -19,12 +19,12 @@ def health() :
     return {
         "status" : "ok"
     }
-@app.get("products-fast")
+@app.get("/products-fast")
 def products_fast() :
-    conn = sqlite3.conner("store.db")
+    conn = sqlite3.connect("store.db")
     curr = conn.cursor()
     curr.execute("SELECT id, name, price FROM products")
-    rows = curr.fetchone()
+    rows = curr.fetchall()
     conn.close()
     return {
         "products" : [{"id" : r[0], "name" : r[1], "price" : r[2]} for r in rows]
@@ -40,14 +40,14 @@ def products_n_plus_one() :
     for pid in ids :
         c2 = sqlite3.connect("store.db")
         curr2 = c2.cursor()
-        curr2.execute("SELECT name, price FROM products WHERE id = ?", (pid))
+        curr2.execute("SELECT name, price FROM products WHERE id = ?", (pid,))
         row = curr2.fetchone()
         c2.close()
         if row :
             results.append({"id" : pid, "name" : row[0], "price" : row[1]})
-        return {
-            "products" : results
-        }
+    return {
+        "products" : results
+    }
 @app.get("/slow-blocking")
 def slow_blocking() :
     time.sleep(1.5)
