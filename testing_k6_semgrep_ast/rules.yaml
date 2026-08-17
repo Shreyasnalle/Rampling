@@ -1,0 +1,12 @@
+rules :
+- id : blocking-sleep-in-route
+  patterns :
+    - pattern : |
+        @app.$MEHTOD(...)
+        def $FUNC(...) :
+          ...
+          time.sleep(...)
+          ...
+  message : "Blocking time.sleep() found in route function, this iwll block all the concurrent reuqests"
+  languages : [python]
+  severity : WARNING 
