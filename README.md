@@ -69,3 +69,33 @@ Scanning 1 file (only git-tracked) with 1 Code rule:
 Ran 1 rule on 1 file: 1 finding.
 (ramplingenv) shreyas-nalle@shreyas-nalle-device:~/Desktop/Rampling/Rampling$
 </p>
+<h3> AST parser to find the routes, their methods and function name </h3>
+<p> 
+[
+  {
+    "method": "GET",
+    "path": "/health",
+    "function": "health"
+  },
+  {
+    "method": "GET",
+    "path": "/products-fast",
+    "function": "products_fast"
+  },
+  {
+    "method": "GET",
+    "path": "/products-n-plus-one",
+    "function": "products_n_plus_one"
+  },
+  {
+    "method": "GET",
+    "path": "/slow-blocking",
+    "function": "slow_blocking"
+  },
+  {
+    "method": "GET",
+    "path": "/random-fail",
+    "function": "random_fail"
+  }
+] 
+</p>
