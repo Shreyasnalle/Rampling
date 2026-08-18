@@ -7,6 +7,6 @@ rules :
           ...
           time.sleep(...)
           ...
-  message : "Blocking time.sleep() found in route function, this iwll block all the concurrent reuqests"
+  message : "Blocking time.sleep() found in route function, this will block all the concurrent requests"
   languages : [python]
   severity : WARNING 
