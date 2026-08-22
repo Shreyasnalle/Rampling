@@ -5,7 +5,6 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from database import create_database_if_not_exists
 from db_inject import ensure_table_exists, inject_report
 from scanner import extract_routes, run_semgrep, run_k6, build_report
 
@@ -24,7 +23,6 @@ def parse_args():
 
 
 def run_pipeline(args):
-    create_database_if_not_exists()
     ensure_table_exists()
 
     routes = extract_routes(args.target)
