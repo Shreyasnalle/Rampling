@@ -8,9 +8,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 from db_inject import ensure_table_exists, inject_report
 from scanner import extract_routes, run_semgrep, run_k6, build_report
 
-DEFAULT_TARGET = "main_app.py"
-DEFAULT_RULES = "../testing_k6_semgrep_ast/rules.yaml"
-DEFAULT_K6_SCRIPT = "../testing_k6_semgrep_ast/test.js"
+BASE_DIR = os.path.dirname(__file__)
+DEFAULT_TARGET = os.path.join(BASE_DIR, "demo_pipeline_check.py")
+DEFAULT_RULES = os.path.join(BASE_DIR, "..", "testing_k6_semgrep_ast", "rules.yaml")
+DEFAULT_K6_SCRIPT = os.path.join(BASE_DIR, "..", "testing_k6_semgrep_ast", "test.js")
 
 
 def parse_args():
@@ -27,7 +28,7 @@ def run_pipeline(args):
 
     routes = extract_routes(args.target)
     if not routes:
-        print("[Warning] No routes found.")
+        print("No routes found")
 
     findings = run_semgrep(args.target, args.rules)
 

@@ -4,7 +4,6 @@ import subprocess
 from datetime import datetime, timezone
 from typing import Any
 
-
 def extract_routes(filepath: str) -> list[dict]:
     with open(filepath, "r") as f:
         source = f.read()
@@ -26,7 +25,7 @@ def extract_routes(filepath: str) -> list[dict]:
                     "path": decorator.args[0].value,
                     "function": node.name,
                 })
-    print(f"[AST] Found {len(routes)} route(s) in '{filepath}'.")
+    print(f"Found {len(routes)} route(s) in '{filepath}'")
     return routes
 
 
@@ -37,12 +36,12 @@ def run_semgrep(filepath: str, rules_path: str) -> list[dict]:
         text=True,
     )
     if result.returncode not in (0, 1):
-        print(f"[Semgrep] Warning: exit {result.returncode}")
+        print(f"Semgrep Warning: exit {result.returncode}")
         print(result.stderr[:500])
     try:
         output = json.loads(result.stdout)
     except json.JSONDecodeError:
-        print("[Semgrep] Could not parse JSON output.")
+        print("Semgrep could not parse JSON output")
         return []
     findings = []
     for r in output.get("results", []):
@@ -53,7 +52,7 @@ def run_semgrep(filepath: str, rules_path: str) -> list[dict]:
             "message": r["extra"]["message"],
             "severity": r["extra"].get("severity", "WARNING"),
         })
-    print(f"[Semgrep] {len(findings)} finding(s) in '{filepath}'.")
+    print(f"{len(findings)} finding(s) in '{filepath}'.")
     return findings
 
 

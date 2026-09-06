@@ -48,7 +48,7 @@ def ensure_table_exists():
         with conn:
             with conn.cursor() as cur:
                 cur.execute(CREATE_TABLE_SQL)
-        print("[DB] scan_results table is ready.")
+        print("scan_results database is ready.")
     finally:
         conn.close()
 
