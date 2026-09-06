@@ -1,6 +1,7 @@
 import ast
 import json
 import subprocess
+import os
 from datetime import datetime, timezone
 from typing import Any
 
@@ -24,25 +25,43 @@ def extract_routes(filepath: str) -> list[dict]:
                     "method": decorator.func.attr.upper(),
                     "path": decorator.args[0].value,
                     "function": node.name,
+                    "start_line": node.decorator_list[0].lineno if node.decorator_list else getattr(node, "lineno", 0),
+                    "end_line": getattr(node, "end_lineno", getattr(node, "lineno", 0) + 50),
                 })
     print(f"Found {len(routes)} route(s) in '{filepath}'")
     return routes
 
 
 def run_semgrep(filepath: str, rules_path: str) -> list[dict]:
+    output_file = "/tmp/semgrep_output.json"
     result = subprocess.run(
-        ["semgrep", "--config", rules_path, filepath, "--json"],
+        ["semgrep", "--config", rules_path, filepath, "--json", "--output", output_file],
         capture_output=True,
         text=True,
     )
-    if result.returncode not in (0, 1):
-        print(f"Semgrep Warning: exit {result.returncode}")
-        print(result.stderr[:500])
-    try:
-        output = json.loads(result.stdout)
-    except json.JSONDecodeError:
+
+    output = {}
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, "r") as f:
+                output = json.load(f)
+        except Exception:
+            pass
+
+    if not output and result.stdout:
+        raw = result.stdout
+        start = raw.find("{")
+        end = raw.rfind("}")
+        if start != -1 and end != -1:
+            try:
+                output = json.loads(raw[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+
+    if not output:
         print("Semgrep could not parse JSON output")
         return []
+
     findings = []
     for r in output.get("results", []):
         findings.append({
@@ -63,9 +82,6 @@ def run_k6(script_path: str) -> dict[str, Any]:
         capture_output=True,
         text=True,
     )
-    if result.returncode not in (0, 99):
-        print(f"[k6] Warning: exit {result.returncode}")
-        print(result.stderr[:500])
     try:
         with open(summary_file, "r") as f:
             summary = json.load(f)
@@ -74,15 +90,20 @@ def run_k6(script_path: str) -> dict[str, Any]:
         return {}
     metrics = summary.get("metrics", {})
 
-    def _val(metric_name: str, stat: str) -> float:
+    def _val(metric_name: str, *keys: str) -> float:
         m = metrics.get(metric_name, {})
-        return float(m.get("values", {}).get(stat, 0.0))
+        for k in keys:
+            if k in m:
+                return float(m[k])
+            if "values" in m and isinstance(m["values"], dict) and k in m["values"]:
+                return float(m["values"][k])
+        return 0.0
 
     parsed = {
         "avg_duration": _val("http_req_duration", "avg"),
         "p90_duration": _val("http_req_duration", "p(90)"),
         "p95_duration": _val("http_req_duration", "p(95)"),
-        "req_failed": _val("http_req_failed", "rate"),
+        "req_failed": _val("http_req_failed", "value", "rate"),
         "rps": _val("http_reqs", "rate"),
     }
     print(f"[k6] avg={parsed['avg_duration']:.1f}ms p90={parsed['p90_duration']:.1f}ms p95={parsed['p95_duration']:.1f}ms fail={parsed['req_failed']:.2%} rps={parsed['rps']:.1f}")
@@ -92,17 +113,22 @@ def run_k6(script_path: str) -> dict[str, Any]:
 def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_metrics: dict[str, Any]) -> list[dict]:
     finding_map: dict[str, dict] = {}
     for f in findings:
+        matched = False
         for route in routes:
-            if route["function"] in f["message"] or route["path"] in f["message"]:
-                finding_map[route["function"]] = f
+            func_name = route["function"]
+            route_path = route["path"]
+            start_line = route.get("start_line", 0)
+            end_line = route.get("end_line", 0)
+
+            if (func_name in f["message"] or route_path in f["message"] or (start_line <= f["line"] <= end_line)):
+                finding_map[func_name] = f
+                matched = True
                 break
-        else:
-            finding_map.setdefault("__unmatched__", f)
 
     scanned_at = datetime.now(timezone.utc).isoformat()
     rows = []
     for route in routes:
-        finding = finding_map.get(route["function"], finding_map.get("__unmatched__"))
+        finding = finding_map.get(route["function"])
         rows.append({
             "scanned_at": scanned_at,
             "target_file": target_file,
