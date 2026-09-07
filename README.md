@@ -2,6 +2,15 @@
 
 ![Rough Workflow](assets/rough_workflow.png)
 
+### AST Parser Endpoint & Deep Dive
+![AST Workflow](assets/ast_workflow.png)
+
+### Targeted Semgrep SAST on Extracted Components
+![Semgrep Workflow](assets/semgrep_workflow.png)
+
+### k6 Endpoint Load Testing
+![k6 Workflow](assets/k6_workflow.png)
+
 ## Demo AST + Semgrep + k6 pipeline Result
 
 ```text
