@@ -3,12 +3,15 @@ import json
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+BASE_DIR = os.path.dirname(__file__)
+sys.path.insert(0, BASE_DIR)
 
 from db_inject import ensure_table_exists, inject_report
-from scanner import extract_routes, run_semgrep, run_k6, build_report
+from AST import extract_routes
+from Semgrep import run_semgrep
+from K6 import run_k6
+from scanner import build_report
 
-BASE_DIR = os.path.dirname(__file__)
 DEFAULT_TARGET = os.path.join(BASE_DIR, "demo_pipeline_check.py")
 DEFAULT_RULES = os.path.join(BASE_DIR, "rules.yaml")
 DEFAULT_K6_SCRIPT = os.path.join(BASE_DIR, "test.js")
