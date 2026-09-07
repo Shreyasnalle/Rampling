@@ -41,12 +41,18 @@ def run_semgrep(filepath: str, rules_path: str) -> list[dict]:
     )
 
     output = {}
-    if os.path.exists(output_file):
-        try:
+    try:
+        if os.path.exists(output_file):
             with open(output_file, "r") as f:
                 output = json.load(f)
-        except Exception:
-            pass
+    except Exception:
+        pass
+    finally:
+        if os.path.exists(output_file):
+            try:
+                os.remove(output_file)
+            except OSError:
+                pass
 
     if not output and result.stdout:
         raw = result.stdout
@@ -75,20 +81,28 @@ def run_semgrep(filepath: str, rules_path: str) -> list[dict]:
     return findings
 
 
-def run_k6(script_path: str) -> dict[str, Any]:
+def run_k6(script_path: str) -> list[dict[str, Any]]:
     summary_file = "/tmp/k6_summary.json"
     result = subprocess.run(
         ["k6", "run", "--summary-export", summary_file, script_path],
         capture_output=True,
         text=True,
     )
+    metrics = {}
     try:
-        with open(summary_file, "r") as f:
-            summary = json.load(f)
+        if os.path.exists(summary_file):
+            with open(summary_file, "r") as f:
+                summary = json.load(f)
+                metrics = summary.get("metrics", {})
     except (FileNotFoundError, json.JSONDecodeError) as exc:
-        print(f"[k6] Could not read summary: {exc}")
-        return {}
-    metrics = summary.get("metrics", {})
+        print(f"k6 Could not read summary: {exc}")
+        return []
+    finally:
+        if os.path.exists(summary_file):
+            try:
+                os.remove(summary_file)
+            except OSError:
+                pass
 
     def _val(metric_name: str, *keys: str) -> float:
         m = metrics.get(metric_name, {})
@@ -99,18 +113,29 @@ def run_k6(script_path: str) -> dict[str, Any]:
                 return float(m["values"][k])
         return 0.0
 
-    parsed = {
-        "avg_duration": _val("http_req_duration", "avg"),
-        "p90_duration": _val("http_req_duration", "p(90)"),
-        "p95_duration": _val("http_req_duration", "p(95)"),
-        "req_failed": _val("http_req_failed", "value", "rate"),
-        "rps": _val("http_reqs", "rate"),
-    }
-    print(f"[k6] avg={parsed['avg_duration']:.1f}ms p90={parsed['p90_duration']:.1f}ms p95={parsed['p95_duration']:.1f}ms fail={parsed['req_failed']:.2%} rps={parsed['rps']:.1f}")
+    tag_names = set()
+    for key in metrics.keys():
+        if "{name:" in key and key.endswith("}"):
+            tag = key.split("{name:")[1].rstrip("}")
+            tag_names.add(tag)
+
+    parsed = []
+    for tag in sorted(tag_names):
+        item = {
+            "route_path": tag,
+            "avg_duration": _val(f"http_req_duration{{name:{tag}}}", "avg"),
+            "p90_duration": _val(f"http_req_duration{{name:{tag}}}", "p(90)"),
+            "p95_duration": _val(f"http_req_duration{{name:{tag}}}", "p(95)"),
+            "req_failed": _val(f"http_req_failed{{name:{tag}}}", "value", "rate"),
+            "rps": _val(f"http_reqs{{name:{tag}}}", "rate"),
+        }
+        parsed.append(item)
+        print(f"[k6] {tag}: avg={item['avg_duration']:.1f}ms p90={item['p90_duration']:.1f}ms p95={item['p95_duration']:.1f}ms fail={item['req_failed']:.2%} rps={item['rps']:.1f}")
+
     return parsed
 
 
-def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_metrics: dict[str, Any]) -> list[dict]:
+def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_metrics: list[dict[str, Any]] | dict[str, Any]) -> list[dict]:
     finding_map: dict[str, dict] = {}
     for f in findings:
         matched = False
@@ -125,10 +150,19 @@ def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_
                 matched = True
                 break
 
+    k6_map: dict[str, dict] = {}
+    if isinstance(k6_metrics, list):
+        for k in k6_metrics:
+            if k.get("route_path"):
+                k6_map[k["route_path"]] = k
+    elif isinstance(k6_metrics, dict):
+        k6_map = {r["path"]: k6_metrics for r in routes}
+
     scanned_at = datetime.now(timezone.utc).isoformat()
     rows = []
     for route in routes:
         finding = finding_map.get(route["function"])
+        k6_m = k6_map.get(route["path"], {})
         rows.append({
             "scanned_at": scanned_at,
             "target_file": target_file,
@@ -140,11 +174,11 @@ def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_
             "semgrep_line": finding["line"] if finding else None,
             "semgrep_message": finding["message"] if finding else None,
             "severity": finding["severity"] if finding else "INFO",
-            "k6_avg_duration": k6_metrics.get("avg_duration"),
-            "k6_p90_duration": k6_metrics.get("p90_duration"),
-            "k6_p95_duration": k6_metrics.get("p95_duration"),
-            "k6_req_failed": k6_metrics.get("req_failed"),
-            "k6_rps": k6_metrics.get("rps"),
+            "k6_avg_duration": k6_m.get("avg_duration"),
+            "k6_p90_duration": k6_m.get("p90_duration"),
+            "k6_p95_duration": k6_m.get("p95_duration"),
+            "k6_req_failed": k6_m.get("req_failed"),
+            "k6_rps": k6_m.get("rps"),
         })
     print(f"[Report] Built {len(rows)} row(s).")
     return rows

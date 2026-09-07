@@ -10,8 +10,8 @@ from scanner import extract_routes, run_semgrep, run_k6, build_report
 
 BASE_DIR = os.path.dirname(__file__)
 DEFAULT_TARGET = os.path.join(BASE_DIR, "demo_pipeline_check.py")
-DEFAULT_RULES = os.path.join(BASE_DIR, "..", "testing_k6_semgrep_ast", "rules.yaml")
-DEFAULT_K6_SCRIPT = os.path.join(BASE_DIR, "..", "testing_k6_semgrep_ast", "test.js")
+DEFAULT_RULES = os.path.join(BASE_DIR, "rules.yaml")
+DEFAULT_K6_SCRIPT = os.path.join(BASE_DIR, "test.js")
 
 
 def parse_args():
