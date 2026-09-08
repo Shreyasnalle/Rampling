@@ -11,7 +11,18 @@ def build_report(target_file: str, routes: list[dict], findings: list[dict], k6_
             start_line = route.get("start_line", 0)
             end_line = route.get("end_line", 0)
 
-            if (func_name in f["message"] or route_path in f["message"] or (start_line <= f["line"] <= end_line)):
+            # Check direct match or message match
+            direct_match = (func_name in f["message"] or route_path in f["message"] or (start_line <= f["line"] <= end_line))
+            
+            # Check call-graph scoped lines across helper functions
+            branch_match = False
+            if not direct_match and "scoped_lines" in route:
+                for scope in route["scoped_lines"]:
+                    if scope.get("start_line", 0) <= f["line"] <= scope.get("end_line", 0):
+                        branch_match = True
+                        break
+
+            if direct_match or branch_match:
                 finding_map[func_name] = f
                 matched = True
                 break
