@@ -1,8 +1,3 @@
-"""
-Python AST & Route Parser using Tree-sitter.
-Extracts FastAPI / Flask routes, function definitions, calls, and local module imports.
-"""
-
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -144,7 +139,6 @@ class PythonParser(BaseLanguageParser):
         return calls
 
     def resolve_local_imports(self, root_node: Node, source_bytes: bytes, current_file: str, repo_root: str) -> Dict[str, str]:
-        """Resolves Python `from x import y` and `import x` to local file paths."""
         imports: Dict[str, str] = {}
         current_dir = os.path.dirname(os.path.abspath(current_file))
 

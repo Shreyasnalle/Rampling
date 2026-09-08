@@ -1,8 +1,3 @@
-"""
-JavaScript / TypeScript AST & Route Parser using Tree-sitter.
-Extracts Express routes, function declarations, arrow functions, calls, and require imports.
-"""
-
 import os
 from typing import Any, Dict, List, Optional, Tuple
 

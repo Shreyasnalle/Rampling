@@ -5,7 +5,6 @@ from .tree_sitter_graph import build_call_graph, HAS_TREE_SITTER
 
 
 def _fallback_extract_routes_py(filepath: str) -> List[dict]:
-    """Fallback route extractor using standard Python ast."""
     with open(filepath, "r", encoding="utf-8") as f:
         source = f.read()
     tree = ast.parse(source)
@@ -51,10 +50,6 @@ def _fallback_extract_routes_py(filepath: str) -> List[dict]:
 
 
 def extract_routes(filepath: str, repo_root: Optional[str] = None) -> List[dict]:
-    """
-    Extracts routes and execution call-graphs from an entrypoint file (Python, Go, or JS).
-    Uses Tree-sitter for multi-language parsing, falling back to native Python ast if necessary.
-    """
     if HAS_TREE_SITTER:
         try:
             routes = build_call_graph(filepath, repo_root=repo_root)
@@ -64,7 +59,6 @@ def extract_routes(filepath: str, repo_root: Optional[str] = None) -> List[dict]
         except Exception as e:
             print(f"[AST Warning] Tree-sitter extraction failed: {e}. Trying fallback.")
 
-    # Fallback for Python files
     if filepath.endswith((".py", ".pyw")):
         routes = _fallback_extract_routes_py(filepath)
         print(f"[AST/Fallback] Found {len(routes)} route(s) in '{filepath}'")
@@ -72,4 +66,3 @@ def extract_routes(filepath: str, repo_root: Optional[str] = None) -> List[dict]
 
     print(f"[AST] No routes extracted from '{filepath}'")
     return []
-

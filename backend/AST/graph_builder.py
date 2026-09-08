@@ -1,9 +1,3 @@
-"""
-Recursive Call Graph Builder.
-Orchestrates multi-language route extraction and recursive call-graph construction
-from a user-specified entrypoint file down to internal functions and local dependencies.
-"""
-
 import os
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -25,13 +19,10 @@ except ImportError:
 
 
 class CallGraphBuilder:
-    """Orchestrates multi-language route extraction and recursive call-graph construction."""
-
     def __init__(self, repo_root: Optional[str] = None):
         self.repo_root = os.path.abspath(repo_root) if repo_root else None
         self.parsers: Dict[str, BaseLanguageParser] = {}
 
-        # Safely register available language parsers
         try:
             self.parsers["python"] = PythonParser()
         except Exception:
@@ -47,7 +38,6 @@ class CallGraphBuilder:
         except Exception:
             pass
 
-        # Cache of parsed file info: filepath -> { 'funcs': dict, 'imports': dict, ... }
         self.file_cache: Dict[str, Dict[str, Any]] = {}
 
     def detect_language(self, filepath: str) -> Optional[str]:
@@ -108,7 +98,6 @@ class CallGraphBuilder:
         visited: Set[Tuple[str, str]],
         scoped_lines: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Recursively builds the call-graph tree for a function."""
         abs_file = os.path.abspath(current_file)
         visit_key = (abs_file, func_name)
 
@@ -124,22 +113,18 @@ class CallGraphBuilder:
         imports = file_meta["imports"]
         parser_instance: Optional[BaseLanguageParser] = file_meta.get("parser")
 
-        # Check if this is a known local function in the current file
         func_def: Optional[FunctionDefInfo] = funcs.get(func_name)
 
         if not func_def:
-            # Check if function came from an imported local file
             prefix = func_name.split(".")[0] if "." in func_name else func_name
             target_file = imports.get(prefix)
             if target_file and os.path.isfile(target_file):
                 target_func_name = func_name.split(".")[-1] if "." in func_name else func_name
                 return self._trace_branch(target_func_name, target_file, lang, visited, scoped_lines)
 
-            # Not defined locally -> external / stdlib leaf call
             node_info["external"] = True
             return node_info
 
-        # It is a local function definition: apply cycle detection
         if visit_key in visited:
             node_info["cycle"] = True
             node_info["start_line"] = func_def.start_line
@@ -177,10 +162,6 @@ class CallGraphBuilder:
     def _discover_included_routers(
         self, root_node: Node, source_bytes: bytes, current_file: str, lang: str
     ) -> List[Tuple[str, str]]:
-        """
-        Discovers FastAPI `app.include_router(router, prefix="/...")`
-        Returns a list of (target_file_path, route_prefix).
-        """
         if lang != "python":
             return []
 
@@ -215,7 +196,6 @@ class CallGraphBuilder:
         return discovered
 
     def build(self, entrypoint: str) -> List[Dict[str, Any]]:
-        """Main entrypoint: parses the entrypoint file and returns route trees with full call graphs."""
         abs_entry = os.path.abspath(entrypoint)
         if not os.path.isfile(abs_entry):
             raise FileNotFoundError(f"Entrypoint file not found: {abs_entry}")
@@ -235,7 +215,6 @@ class CallGraphBuilder:
         root_node, source_bytes, parser_instance = parsed
         routes = parser_instance.extract_routes(root_node, source_bytes, abs_entry)
 
-        # Check for multi-file sub-routers (e.g. app.include_router)
         sub_routers = self._discover_included_routers(root_node, source_bytes, abs_entry, lang)
         for sub_file, prefix in sub_routers:
             sub_parsed = self._load_and_parse_file(sub_file, lang)
@@ -249,7 +228,6 @@ class CallGraphBuilder:
                         r.path = f"{clean_prefix}/{clean_path}" if clean_path else clean_prefix
                     routes.append(r)
 
-        # Build execution call graphs for each route
         result_routes: List[Dict[str, Any]] = []
         for route in routes:
             visited_set: Set[Tuple[str, str]] = set()

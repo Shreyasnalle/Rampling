@@ -1,10 +1,3 @@
-"""
-Tree-sitter AST & Call-Graph Engine (Main Orchestration File)
-
-Contains the foundational BaseLanguageParser interface, route/function data structures,
-and runs the multi-language call graph construction from entrypoint to execution branches.
-"""
-
 import os
 import sys
 import json
@@ -61,37 +54,27 @@ class RouteNode:
 
 
 class BaseLanguageParser(ABC):
-    """Abstract base parser blueprint for language-specific AST and route extraction."""
-
     @abstractmethod
     def get_parser(self) -> Parser:
-        """Returns the initialized Tree-sitter Parser loaded with language grammar."""
         pass
 
     @abstractmethod
     def extract_routes(self, root_node: Node, source_bytes: bytes, file_path: str) -> List[RouteNode]:
-        """Discovers all API endpoints declared in the file."""
         pass
 
     @abstractmethod
     def extract_function_defs(self, root_node: Node, source_bytes: bytes, file_path: str) -> Dict[str, FunctionDefInfo]:
-        """Indexes all functions/methods declared in the file."""
         pass
 
     @abstractmethod
     def extract_calls(self, body_node: Node, source_bytes: bytes) -> List[Tuple[str, int]]:
-        """Finds all function/method invocations made inside a function's body."""
         pass
 
     @abstractmethod
     def resolve_local_imports(self, root_node: Node, source_bytes: bytes, current_file: str, repo_root: str) -> Dict[str, str]:
-        """Maps imported symbol names to their local file paths in the repo."""
         pass
 
 
-# ---------------------------------------------------------------------------
-# Import Language-Specific Parsers & Graph Builder
-# ---------------------------------------------------------------------------
 _CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if _CURRENT_DIR not in sys.path:
     sys.path.insert(0, _CURRENT_DIR)
@@ -109,22 +92,14 @@ except ImportError:
 
 
 def build_call_graph(entrypoint: str, repo_root: Optional[str] = None) -> List[Dict[str, Any]]:
-    """
-    Main calling function:
-    Takes a user entrypoint file (Python, Go, or JS) and builds the full call graph tree.
-    """
     builder = CallGraphBuilder(repo_root=repo_root)
     return builder.build(entrypoint)
 
 
-# ---------------------------------------------------------------------------
-# Direct CLI Runner (Main file to run)
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         target_entrypoint = sys.argv[1]
     else:
-        # Default to demo app in parent folder
         current_dir = os.path.dirname(os.path.abspath(__file__))
         target_entrypoint = os.path.join(os.path.dirname(current_dir), "demo_pipeline_check.py")
 

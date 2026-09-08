@@ -1,8 +1,3 @@
-"""
-Go AST & Route Parser using Tree-sitter.
-Extracts Gin / Chi / net/http routes, function declarations, and call expressions.
-"""
-
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
