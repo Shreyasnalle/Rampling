@@ -101,14 +101,13 @@ if __name__ == "__main__":
         target_entrypoint = sys.argv[1]
     else:
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        target_entrypoint = os.path.join(os.path.dirname(current_dir), "demo_pipeline_check.py")
+        target_entrypoint = os.path.join(os.path.dirname(current_dir), "pipeline_check.py")
 
-    print(f"[*] Running Tree-sitter AST Graph Engine on: {target_entrypoint}")
+    print(f"Running Tree-sitter AST Graph Engine on: {target_entrypoint}")
     graph_results = build_call_graph(target_entrypoint)
 
-    print(f"\n[+] Found {len(graph_results)} API route(s):")
+    print(f"\nFound {len(graph_results)} API route(s):")
     for r in graph_results:
-        print(f"\n==========================================")
         print(f"ROUTE: {r['method']} {r['path']} -> {r['function']}()")
         print(f"File:  {r['file']} (Lines {r['start_line']}-{r['end_line']})")
         print(f"Call Graph Tree:")

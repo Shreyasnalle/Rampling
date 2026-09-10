@@ -64,7 +64,7 @@ class CallGraphBuilder:
             tree = parser_instance.get_parser().parse(source_bytes)
             return tree.root_node, source_bytes, parser_instance
         except Exception as err:
-            print(f"[AST Warning] Could not parse file '{file_path}': {err}")
+            print(f"Could not parse file '{file_path}': {err}")
             return None
 
     def _get_file_metadata(self, file_path: str, lang: str) -> Dict[str, Any]:

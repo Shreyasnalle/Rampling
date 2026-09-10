@@ -1,4 +1,3 @@
-import ast
 import os
 from typing import Any, List, Optional
 from .tree_sitter_graph import build_call_graph, HAS_TREE_SITTER
