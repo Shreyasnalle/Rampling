@@ -39,6 +39,7 @@ class CallGraphBuilder:
             pass
 
         self.file_cache: Dict[str, Dict[str, Any]] = {}
+        self.repo_symbols: Dict[str, List[Tuple[str, FunctionDefInfo]]] = {}
 
     def detect_language(self, filepath: str) -> Optional[str]:
         ext = os.path.splitext(filepath)[1].lower()
@@ -48,6 +49,95 @@ class CallGraphBuilder:
             return "go"
         elif ext in (".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"):
             return "javascript"
+        return None
+
+    def _index_repo_symbols(self, lang: str) -> None:
+        if not self.repo_root or not os.path.isdir(self.repo_root):
+            return
+
+        ext_map = {
+            "python": (".py",),
+            "javascript": (".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx"),
+            "go": (".go",),
+        }
+        target_exts = ext_map.get(lang, ())
+        if not target_exts:
+            return
+
+        skip_dirs = {".git", "__pycache__", "node_modules", "venv", ".venv", ".tox", "dist", "build", "env"}
+
+        for root, dirs, files in os.walk(self.repo_root):
+            dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
+            for file in files:
+                if any(file.endswith(ext) for ext in target_exts) and not file.endswith(("_test.go", ".spec.js", ".test.js")):
+                    file_path = os.path.abspath(os.path.join(root, file))
+                    meta = self._get_file_metadata(file_path, lang)
+                    funcs = meta.get("funcs", {})
+                    for fn_name, fn_info in funcs.items():
+                        if fn_name not in self.repo_symbols:
+                            self.repo_symbols[fn_name] = []
+                        self.repo_symbols[fn_name].append((file_path, fn_info))
+
+    def _resolve_target_symbol(
+        self, func_name: str, current_file: str, lang: str
+    ) -> Optional[Tuple[str, str, FunctionDefInfo]]:
+        abs_file = os.path.abspath(current_file)
+        file_meta = self._get_file_metadata(abs_file, lang)
+        funcs = file_meta.get("funcs", {})
+        imports = file_meta.get("imports", {})
+
+        # 1. Exact match in current file
+        if func_name in funcs:
+            return abs_file, func_name, funcs[func_name]
+
+        # 2. Local class/method self.method, this.method, cls.method
+        if func_name.startswith(("self.", "this.", "cls.")):
+            bare = func_name.split(".", 1)[1]
+            if bare in funcs:
+                return abs_file, bare, funcs[bare]
+
+        # 3. Direct local import (e.g. from module import my_func)
+        if func_name in imports:
+            target_file = imports[func_name]
+            if os.path.isfile(target_file):
+                t_meta = self._get_file_metadata(target_file, lang)
+                t_funcs = t_meta.get("funcs", {})
+                if func_name in t_funcs:
+                    return target_file, func_name, t_funcs[func_name]
+                for k, v in t_funcs.items():
+                    if k == func_name or k.endswith(f".{func_name}"):
+                        return target_file, k, v
+
+        # 4. Prefix import (e.g. module.func where module was imported)
+        if "." in func_name:
+            prefix = func_name.split(".")[0]
+            target_method = func_name.split(".")[-1]
+            if prefix in imports:
+                target_file = imports[prefix]
+                if os.path.isfile(target_file):
+                    t_meta = self._get_file_metadata(target_file, lang)
+                    t_funcs = t_meta.get("funcs", {})
+                    if target_method in t_funcs:
+                        return target_file, target_method, t_funcs[target_method]
+                    for k, v in t_funcs.items():
+                        if k == target_method or k.endswith(f".{target_method}"):
+                            return target_file, k, v
+
+        # 5. Repository Symbol Phonebook Match
+        # (Matches functions across codebase even if called via higher-order functions,
+        # thread pools, task queues, or unimported package-level functions)
+        bare_name = func_name.split(".")[-1] if "." in func_name else func_name
+        candidates = self.repo_symbols.get(bare_name, [])
+        if not candidates and func_name in self.repo_symbols:
+            candidates = self.repo_symbols[func_name]
+
+        if candidates:
+            cur_dir = os.path.dirname(abs_file)
+            for c_path, c_info in candidates:
+                if os.path.dirname(c_path) == cur_dir:
+                    return c_path, c_info.name, c_info
+            return candidates[0][0], candidates[0][1].name, candidates[0][1]
+
         return None
 
     def _load_and_parse_file(self, file_path: str, lang: str) -> Optional[Tuple[Node, bytes, BaseLanguageParser]]:
@@ -99,8 +189,6 @@ class CallGraphBuilder:
         scoped_lines: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
         abs_file = os.path.abspath(current_file)
-        visit_key = (abs_file, func_name)
-
         node_info: Dict[str, Any] = {
             "name": func_name,
             "file": abs_file,
@@ -108,64 +196,67 @@ class CallGraphBuilder:
             "calls": [],
         }
 
-        file_meta = self._get_file_metadata(abs_file, lang)
-        funcs = file_meta["funcs"]
-        imports = file_meta["imports"]
-        parser_instance: Optional[BaseLanguageParser] = file_meta.get("parser")
-
-        func_def: Optional[FunctionDefInfo] = funcs.get(func_name)
-
-        if not func_def:
-            # Check self.method, this.method, or cls.method
-            if func_name.startswith(("self.", "this.", "cls.")):
-                method_name = func_name.split(".", 1)[1]
-                if method_name in funcs:
-                    return self._trace_branch(method_name, abs_file, lang, visited, scoped_lines)
-
-            # Check cross-file imports
-            prefix = func_name.split(".")[0] if "." in func_name else func_name
-            target_file = imports.get(prefix)
-            if target_file and os.path.isfile(target_file):
-                target_func_name = func_name.split(".")[-1] if "." in func_name else func_name
-                return self._trace_branch(target_func_name, target_file, lang, visited, scoped_lines)
-
+        # Resolve where this function or symbol actually lives
+        resolved = self._resolve_target_symbol(func_name, abs_file, lang)
+        if not resolved:
             node_info["external"] = True
             return node_info
 
+        target_file, target_func_name, func_def = resolved
+        visit_key = (target_file, target_func_name)
+
+        node_info["name"] = target_func_name
+        node_info["file"] = target_file
+        node_info["start_line"] = func_def.start_line
+        node_info["end_line"] = func_def.end_line
+
         if visit_key in visited:
             node_info["cycle"] = True
-            node_info["start_line"] = func_def.start_line
-            node_info["end_line"] = func_def.end_line
             return node_info
 
         visited.add(visit_key)
 
-        node_info["start_line"] = func_def.start_line
-        node_info["end_line"] = func_def.end_line
-
-        # Avoid appending duplicate scope entries
         scope_entry = {
-            "file": abs_file,
-            "function": func_name,
+            "file": target_file,
+            "function": target_func_name,
             "start_line": func_def.start_line,
             "end_line": func_def.end_line,
         }
         if scope_entry not in scoped_lines:
             scoped_lines.append(scope_entry)
 
+        target_file_meta = self._get_file_metadata(target_file, lang)
+        parser_instance: Optional[BaseLanguageParser] = target_file_meta.get("parser")
+
         if parser_instance and func_def.node:
-            invocations = parser_instance.extract_calls(func_def.node, file_meta["source_bytes"])
+            invocations = parser_instance.extract_calls(func_def.node, target_file_meta["source_bytes"])
             for call_raw, call_line in invocations:
                 clean_name = call_raw.strip()
-                child_branch = self._trace_branch(
-                    func_name=clean_name,
-                    current_file=abs_file,
-                    lang=lang,
-                    visited=visited,
-                    scoped_lines=scoped_lines,
-                )
-                child_branch["invoked_at_line"] = call_line
-                node_info["calls"].append(child_branch)
+                if not clean_name:
+                    continue
+
+                # Check if this candidate symbol is part of the project
+                target_cand = self._resolve_target_symbol(clean_name, target_file, lang)
+                if target_cand:
+                    child_branch = self._trace_branch(
+                        func_name=clean_name,
+                        current_file=target_file,
+                        lang=lang,
+                        visited=visited,
+                        scoped_lines=scoped_lines,
+                    )
+                    child_branch["invoked_at_line"] = call_line
+                    node_info["calls"].append(child_branch)
+                else:
+                    # External / library call
+                    if "." in clean_name or clean_name[0].isupper() or "(" in clean_name:
+                        node_info["calls"].append({
+                            "name": clean_name,
+                            "file": target_file,
+                            "external": True,
+                            "calls": [],
+                            "invoked_at_line": call_line,
+                        })
 
         return node_info
 
@@ -283,6 +374,9 @@ class CallGraphBuilder:
         if not lang or lang not in self.parsers:
             print(f"[AST] Language '{lang}' not supported by Tree-sitter parsers. Falling back to native extractors.")
             return []
+
+        # Build repository symbol phonebook index
+        self._index_repo_symbols(lang)
 
         parsed = self._load_and_parse_file(abs_entry, lang)
         if not parsed:

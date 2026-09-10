@@ -32,11 +32,8 @@ def parse_args():
 
 
 def run_pipeline(args):
-    ensure_table_exists()
-
     cloned_dir = None
     target_scan_file = args.target
-    semgrep_target = args.target
 
     try:
         if args.repo_url:
@@ -51,30 +48,31 @@ def run_pipeline(args):
                 output_json="/tmp/ast_graph.json",
             )
             target_scan_file = entrypoint_path
-            semgrep_target = backend_dir
         else:
             routes = extract_routes(args.target)
 
-        if not routes:
-            print("No routes found")
+        print("\n" + "=" * 60)
+        print("           AST GRAPH EXTRACTION RESULTS")
+        print("=" * 60)
+        print(f"Total Routes Discovered: {len(routes)}")
+        print("AST Graph JSON written to: /tmp/ast_graph.json\n")
 
-        findings = run_semgrep(semgrep_target, args.rules)
+        for idx, r in enumerate(routes, 1):
+            print(f"[{idx}] {r['method']} {r['path']} -> {r['function']}()")
+            print(f"    File: {r['file']} (Lines {r['start_line']}-{r['end_line']})")
+            scoped = r.get("scoped_lines", [])
+            print(f"    Scoped Ranges ({len(scoped)} range(s)):")
+            for sc in scoped:
+                print(f"      • {os.path.basename(sc['file'])}:{sc['function']} (lines {sc['start_line']}-{sc['end_line']})")
+            print()
 
-        k6_metrics = {}
-        if not args.skip_k6:
-            k6_metrics = run_k6(args.k6_script)
-
-        report_rows = build_report(
-            target_file=target_scan_file,
-            routes=routes,
-            findings=findings,
-            k6_metrics=k6_metrics,
-        )
-
-        inserted_ids = inject_report(report_rows)
-
-        print(f"\nRoutes: {len(routes)} | Findings: {len(findings)} | Inserted: {len(inserted_ids)} -> {inserted_ids}")
-        print(json.dumps(report_rows, indent=2, default=str))
+        # NOTE: Semgrep static analysis, k6 load testing, and database injection
+        # are currently blocked while testing Git sparse cloning and AST graph building.
+        #
+        # findings = run_semgrep(semgrep_target, args.rules)
+        # k6_metrics = run_k6(args.k6_script)
+        # report_rows = build_report(target_scan_file, routes, findings, k6_metrics)
+        # inject_report(report_rows)
 
     finally:
         if cloned_dir:

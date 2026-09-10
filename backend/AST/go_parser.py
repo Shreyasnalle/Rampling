@@ -50,7 +50,7 @@ class GoParser(BaseLanguageParser):
                             for arg in args_node.children:
                                 if arg.type in ("interpreted_string_literal", "raw_string_literal"):
                                     path = self._strip_quotes(arg.text.decode("utf-8"))
-                                elif arg.type == "identifier":
+                                elif arg.type in ("identifier", "selector_expression"):
                                     handler_name = arg.text.decode("utf-8")
                                 elif arg.type == "func_literal":
                                     handler_name = f"<inline_{method.lower()}_{path.replace('/', '_').strip('_')}>"
@@ -102,14 +102,27 @@ class GoParser(BaseLanguageParser):
         if not body_node:
             return []
         calls: List[Tuple[str, int]] = []
+        seen = set()
 
         def walk(node: Node):
-            if node.type == "call_expression":
+            line = node.start_point[0] + 1
+            if node.type in ("call_expression", "go_statement"):
                 fn_node = node.child_by_field_name("function")
                 if fn_node:
                     call_name = fn_node.text.decode("utf-8")
-                    call_line = node.start_point[0] + 1
-                    calls.append((call_name, call_line))
+                    if (call_name, line) not in seen:
+                        seen.add((call_name, line))
+                        calls.append((call_name, line))
+
+                args_node = node.child_by_field_name("arguments")
+                if args_node:
+                    for arg in args_node.children:
+                        if arg.type in ("identifier", "selector_expression"):
+                            txt = arg.text.decode("utf-8")
+                            if (txt, line) not in seen:
+                                seen.add((txt, line))
+                                calls.append((txt, line))
+
             for child in node.children:
                 walk(child)
 

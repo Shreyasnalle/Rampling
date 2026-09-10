@@ -50,7 +50,7 @@ class JavascriptParser(BaseLanguageParser):
                             for arg in args_node.children:
                                 if arg.type in ("string", "template_string"):
                                     path = self._strip_quotes(arg.text.decode("utf-8"))
-                                elif arg.type == "identifier":
+                                elif arg.type in ("identifier", "member_expression"):
                                     handler_name = arg.text.decode("utf-8")
                                 elif arg.type in ("arrow_function", "function_expression"):
                                     handler_name = f"<inline_{method.lower()}_{path.replace('/', '_').strip('_')}>"
@@ -144,14 +144,46 @@ class JavascriptParser(BaseLanguageParser):
         if not body_node:
             return []
         calls: List[Tuple[str, int]] = []
+        seen = set()
+
+        local_assigned_vars = set()
+        def find_locals(n: Node):
+            if n.type == "variable_declarator":
+                name = n.child_by_field_name("name")
+                if name and name.type == "identifier":
+                    local_assigned_vars.add(name.text.decode("utf-8"))
+            for child in n.children:
+                find_locals(child)
+
+        find_locals(body_node)
 
         def walk(node: Node):
+            line = node.start_point[0] + 1
             if node.type == "call_expression":
                 fn_node = node.child_by_field_name("function")
                 if fn_node:
                     call_name = fn_node.text.decode("utf-8")
-                    call_line = node.start_point[0] + 1
-                    calls.append((call_name, call_line))
+                    if (call_name, line) not in seen:
+                        seen.add((call_name, line))
+                        calls.append((call_name, line))
+
+                args_node = node.child_by_field_name("arguments")
+                if args_node:
+                    for arg in args_node.children:
+                        if arg.type in ("identifier", "member_expression"):
+                            txt = arg.text.decode("utf-8")
+                            if txt not in local_assigned_vars and (txt, line) not in seen:
+                                seen.add((txt, line))
+                                calls.append((txt, line))
+
+            elif node.type in ("return_statement", "await_expression"):
+                for child in node.children:
+                    if child.type in ("identifier", "member_expression"):
+                        txt = child.text.decode("utf-8")
+                        if txt not in local_assigned_vars and (txt, line) not in seen:
+                            seen.add((txt, line))
+                            calls.append((txt, line))
+
             for child in node.children:
                 walk(child)
 

@@ -153,29 +153,61 @@ class PythonParser(BaseLanguageParser):
         if not body_node:
             return []
         calls: List[Tuple[str, int]] = []
+        seen = set()
+
+        # Identify local assigned variable names in this function body
+        # so primitive variables are not treated as function calls
+        local_assigned_vars = set()
+        def find_locals(n: Node):
+            if n.type == "assignment":
+                left = n.child_by_field_name("left")
+                if left and left.type == "identifier":
+                    local_assigned_vars.add(left.text.decode("utf-8"))
+            elif n.type == "for_statement":
+                left = n.child_by_field_name("left")
+                if left and left.type == "identifier":
+                    local_assigned_vars.add(left.text.decode("utf-8"))
+            for child in n.children:
+                find_locals(child)
+
+        find_locals(body_node)
 
         def walk(node: Node):
+            line = node.start_point[0] + 1
+
             if node.type == "call":
                 fn_node = node.child_by_field_name("function")
-                args_node = node.child_by_field_name("arguments")
                 if fn_node:
                     call_name = fn_node.text.decode("utf-8")
-                    call_line = node.start_point[0] + 1
-                    calls.append((call_name, call_line))
+                    if (call_name, line) not in seen:
+                        seen.add((call_name, line))
+                        calls.append((call_name, line))
 
-                    # Trace FastAPI Depends(auth_function) calls
-                    if (call_name == "Depends" or call_name.endswith(".Depends")) and args_node:
-                        for arg in args_node.children:
-                            if arg.type in ("identifier", "attribute"):
-                                dep_target = arg.text.decode("utf-8")
-                                calls.append((dep_target, call_line))
+                # Inspect arguments for passed callables (to_thread, submit, map, delay, callbacks, etc.)
+                args_node = node.child_by_field_name("arguments")
+                if args_node:
+                    for arg in args_node.children:
+                        if arg.type in ("identifier", "attribute"):
+                            txt = arg.text.decode("utf-8")
+                            if txt not in local_assigned_vars and (txt, line) not in seen:
+                                seen.add((txt, line))
+                                calls.append((txt, line))
+                        elif arg.type == "keyword_argument":
+                            val = arg.child_by_field_name("value")
+                            if val and val.type in ("identifier", "attribute"):
+                                txt = val.text.decode("utf-8")
+                                if txt not in local_assigned_vars and (txt, line) not in seen:
+                                    seen.add((txt, line))
+                                    calls.append((txt, line))
 
-                    # Trace BackgroundTasks.add_task(task_func)
-                    if call_name.endswith(".add_task") and args_node and args_node.children:
-                        for arg in args_node.children:
-                            if arg.type in ("identifier", "attribute"):
-                                calls.append((arg.text.decode("utf-8"), call_line))
-                                break
+            # Also capture yield, return, await expressions
+            elif node.type in ("yield", "return_statement", "await"):
+                for child in node.children:
+                    if child.type in ("identifier", "attribute"):
+                        txt = child.text.decode("utf-8")
+                        if txt not in local_assigned_vars and (txt, line) not in seen:
+                            seen.add((txt, line))
+                            calls.append((txt, line))
 
             for child in node.children:
                 walk(child)
