@@ -3,7 +3,8 @@ import shutil
 import tempfile
 import subprocess
 import uuid
-from typing import Optional, Tuple
+import json
+from typing import Optional, Tuple, List, Dict, Any
 
 
 def clone_repo(
@@ -96,3 +97,34 @@ def resolve_paths(
         raise FileNotFoundError(f"Entrypoint file '{entrypoint_file}' not found in '{backend_path}'")
 
     return os.path.abspath(backend_path), os.path.abspath(entrypoint_path)
+
+
+def ingest_and_extract_routes(
+    repo_url: str,
+    backend_folder: str,
+    entrypoint_file: str = "main.py",
+    output_json: Optional[str] = "/tmp/ast_graph.json",
+) -> Tuple[List[Dict[str, Any]], str, str, str]:
+    cloned_repo_dir = clone_repo(
+        repo_url=repo_url,
+        backend_folder=backend_folder,
+    )
+
+    backend_dir, entrypoint_path = resolve_paths(
+        cloned_repo_path=cloned_repo_dir,
+        backend_folder=backend_folder,
+        entrypoint_file=entrypoint_file,
+    )
+
+    from AST import extract_routes
+
+    routes = extract_routes(
+        filepath=entrypoint_path,
+        repo_root=backend_dir,
+    )
+
+    if output_json:
+        with open(output_json, "w", encoding="utf-8") as f:
+            json.dump(routes, f, indent=2)
+
+    return routes, cloned_repo_dir, backend_dir, entrypoint_path
