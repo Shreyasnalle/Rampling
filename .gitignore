@@ -6,3 +6,11 @@ __pycache__/
 .env
 .ds_store
 testing_k6_semgrep_ast/
+
+# Frontend dependencies & Next.js build outputs
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.vercel/
+frontend/*.tsbuildinfo
