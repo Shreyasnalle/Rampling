@@ -63,13 +63,32 @@ class PythonParser(BaseLanguageParser):
                         if not func_node or not args_node:
                             continue
 
-                        method = None
                         func_text = func_node.text.decode("utf-8")
                         parts = func_text.split(".")
-                        if len(parts) >= 2:
-                            candidate_method = parts[-1].upper()
-                            if candidate_method in HTTP_METHODS or candidate_method == "API_ROUTE":
-                                method = candidate_method if candidate_method != "API_ROUTE" else "ALL"
+                        candidate = parts[-1].upper() if len(parts) >= 2 else ""
+
+                        detected_methods: List[str] = []
+                        if candidate in HTTP_METHODS:
+                            detected_methods = [candidate]
+                        elif candidate in ("ROUTE", "API_ROUTE"):
+                            # Check keyword argument 'methods' e.g. methods=["GET", "POST"]
+                            found_methods = []
+                            for arg in args_node.children:
+                                if arg.type == "keyword_argument":
+                                    k_node = arg.child_by_field_name("name")
+                                    v_node = arg.child_by_field_name("value")
+                                    if k_node and k_node.text.decode("utf-8") == "methods" and v_node:
+                                        for m_child in v_node.children:
+                                            if m_child.type == "string":
+                                                m_str = self._strip_quotes(m_child.text.decode("utf-8")).upper()
+                                                if m_str in HTTP_METHODS:
+                                                    found_methods.append(m_str)
+                            if found_methods:
+                                detected_methods = found_methods
+                            elif candidate == "ROUTE":
+                                detected_methods = ["GET"]  # Flask defaults @app.route to GET
+                            else:
+                                detected_methods = ["ALL"]
 
                         path = "/"
                         for arg in args_node.children:
@@ -77,7 +96,7 @@ class PythonParser(BaseLanguageParser):
                                 path = self._strip_quotes(arg.text.decode("utf-8"))
                                 break
 
-                        if method:
+                        for method in detected_methods:
                             routes.append(
                                 RouteNode(
                                     method=method,
@@ -86,6 +105,7 @@ class PythonParser(BaseLanguageParser):
                                     file=file_path,
                                     start_line=start_line,
                                     end_line=end_line,
+                                    handler_node=fn_def,
                                 )
                             )
 
@@ -98,24 +118,33 @@ class PythonParser(BaseLanguageParser):
     def extract_function_defs(self, root_node: Node, source_bytes: bytes, file_path: str) -> Dict[str, FunctionDefInfo]:
         funcs: Dict[str, FunctionDefInfo] = {}
 
-        def walk(node: Node):
+        def walk(node: Node, current_class: Optional[str] = None):
+            if node.type == "class_definition":
+                class_name_node = node.child_by_field_name("name")
+                c_name = class_name_node.text.decode("utf-8") if class_name_node else None
+                for child in node.children:
+                    walk(child, current_class=c_name)
+                return
+
             if node.type in ("function_definition", "async_function_definition"):
                 name_node = node.child_by_field_name("name")
                 if name_node:
                     fn_name = name_node.text.decode("utf-8")
                     start_line = node.start_point[0] + 1
                     end_line = node.end_point[0] + 1
-                    body_node = node.child_by_field_name("body")
-                    funcs[fn_name] = FunctionDefInfo(
+                    info = FunctionDefInfo(
                         name=fn_name,
                         file=file_path,
                         start_line=start_line,
                         end_line=end_line,
-                        node=body_node,
+                        node=node,
                     )
+                    funcs[fn_name] = info
+                    if current_class:
+                        funcs[f"{current_class}.{fn_name}"] = info
 
             for child in node.children:
-                walk(child)
+                walk(child, current_class)
 
         walk(root_node)
         return funcs
@@ -128,10 +157,26 @@ class PythonParser(BaseLanguageParser):
         def walk(node: Node):
             if node.type == "call":
                 fn_node = node.child_by_field_name("function")
+                args_node = node.child_by_field_name("arguments")
                 if fn_node:
                     call_name = fn_node.text.decode("utf-8")
                     call_line = node.start_point[0] + 1
                     calls.append((call_name, call_line))
+
+                    # Trace FastAPI Depends(auth_function) calls
+                    if (call_name == "Depends" or call_name.endswith(".Depends")) and args_node:
+                        for arg in args_node.children:
+                            if arg.type in ("identifier", "attribute"):
+                                dep_target = arg.text.decode("utf-8")
+                                calls.append((dep_target, call_line))
+
+                    # Trace BackgroundTasks.add_task(task_func)
+                    if call_name.endswith(".add_task") and args_node and args_node.children:
+                        for arg in args_node.children:
+                            if arg.type in ("identifier", "attribute"):
+                                calls.append((arg.text.decode("utf-8"), call_line))
+                                break
+
             for child in node.children:
                 walk(child)
 
@@ -141,45 +186,102 @@ class PythonParser(BaseLanguageParser):
     def resolve_local_imports(self, root_node: Node, source_bytes: bytes, current_file: str, repo_root: str) -> Dict[str, str]:
         imports: Dict[str, str] = {}
         current_dir = os.path.dirname(os.path.abspath(current_file))
+        repo_root_abs = os.path.abspath(repo_root) if repo_root else current_dir
 
-        def find_python_file(module_path: str) -> Optional[str]:
-            rel_path = module_path.replace(".", os.sep)
+        def check_file_candidates(base_dir: str, rel_path: str) -> Optional[str]:
+            rel_path = rel_path.strip(os.sep)
             candidates = [
-                os.path.join(current_dir, rel_path + ".py"),
-                os.path.join(current_dir, rel_path, "__init__.py"),
-                os.path.join(repo_root, rel_path + ".py"),
-                os.path.join(repo_root, rel_path, "__init__.py"),
+                os.path.join(base_dir, rel_path + ".py"),
+                os.path.join(base_dir, rel_path, "__init__.py"),
             ]
             for c in candidates:
                 if os.path.isfile(c):
                     return os.path.abspath(c)
             return None
 
+        def find_python_target(mod_name: str, dots: int = 0) -> Optional[str]:
+            if dots > 0:
+                base = current_dir
+                for _ in range(dots - 1):
+                    parent = os.path.dirname(base)
+                    if parent and parent != base:
+                        base = parent
+                if not mod_name:
+                    return os.path.abspath(base)
+                rel = mod_name.replace(".", os.sep)
+                return check_file_candidates(base, rel)
+
+            rel = mod_name.replace(".", os.sep)
+            for search_root in (current_dir, repo_root_abs):
+                resolved = check_file_candidates(search_root, rel)
+                if resolved:
+                    return resolved
+            return None
+
         def walk(node: Node):
             if node.type == "import_from_statement":
-                module_node = node.child_by_field_name("module_name")
-                module_name = module_node.text.decode("utf-8") if module_node else ""
-                target_file = find_python_file(module_name) if module_name else None
+                dots = 0
+                mod_name = ""
 
+                # Locate relative_import or dotted_name
                 for child in node.children:
-                    if child.type == "dotted_name" and child != module_node:
+                    if child.type == "relative_import":
+                        raw_text = child.text.decode("utf-8")
+                        dots = len(raw_text) - len(raw_text.lstrip("."))
+                        mod_name = raw_text.lstrip(".")
+                        break
+                    elif child.type == "dotted_name":
+                        mod_name = child.text.decode("utf-8")
+                        break
+
+                target_mod_file = find_python_target(mod_name, dots)
+
+                is_after_import = False
+                for child in node.children:
+                    if child.type == "import":
+                        is_after_import = True
+                        continue
+                    if not is_after_import:
+                        continue
+
+                    if child.type == "dotted_name":
                         symbol = child.text.decode("utf-8")
-                        if target_file:
-                            imports[symbol] = target_file
+                        sub_target = find_python_target(f"{mod_name}.{symbol}" if mod_name else symbol, dots)
+                        if sub_target:
+                            imports[symbol] = sub_target
+                        elif target_mod_file and os.path.isfile(target_mod_file):
+                            imports[symbol] = target_mod_file
+
                     elif child.type == "aliased_import":
                         name_node = child.child_by_field_name("name")
                         alias_node = child.child_by_field_name("alias")
-                        symbol = alias_node.text.decode("utf-8") if alias_node else (name_node.text.decode("utf-8") if name_node else "")
-                        if symbol and target_file:
-                            imports[symbol] = target_file
+                        sym = name_node.text.decode("utf-8") if name_node else ""
+                        alias = alias_node.text.decode("utf-8") if alias_node else sym
+                        if sym:
+                            sub_target = find_python_target(f"{mod_name}.{sym}" if mod_name else sym, dots)
+                            if sub_target:
+                                imports[alias] = sub_target
+                            elif target_mod_file and os.path.isfile(target_mod_file):
+                                imports[alias] = target_mod_file
 
             elif node.type == "import_statement":
                 for child in node.children:
                     if child.type == "dotted_name":
                         mod = child.text.decode("utf-8")
-                        target_file = find_python_file(mod)
+                        target_file = find_python_target(mod)
                         if target_file:
                             imports[mod] = target_file
+                            short_name = mod.split(".")[-1]
+                            imports[short_name] = target_file
+                    elif child.type == "aliased_import":
+                        name_node = child.child_by_field_name("name")
+                        alias_node = child.child_by_field_name("alias")
+                        if name_node and alias_node:
+                            mod = name_node.text.decode("utf-8")
+                            alias = alias_node.text.decode("utf-8")
+                            target_file = find_python_target(mod)
+                            if target_file:
+                                imports[alias] = target_file
 
             for child in node.children:
                 walk(child)

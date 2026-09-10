@@ -116,6 +116,13 @@ class CallGraphBuilder:
         func_def: Optional[FunctionDefInfo] = funcs.get(func_name)
 
         if not func_def:
+            # Check self.method, this.method, or cls.method
+            if func_name.startswith(("self.", "this.", "cls.")):
+                method_name = func_name.split(".", 1)[1]
+                if method_name in funcs:
+                    return self._trace_branch(method_name, abs_file, lang, visited, scoped_lines)
+
+            # Check cross-file imports
             prefix = func_name.split(".")[0] if "." in func_name else func_name
             target_file = imports.get(prefix)
             if target_file and os.path.isfile(target_file):
@@ -136,12 +143,15 @@ class CallGraphBuilder:
         node_info["start_line"] = func_def.start_line
         node_info["end_line"] = func_def.end_line
 
-        scoped_lines.append({
+        # Avoid appending duplicate scope entries
+        scope_entry = {
             "file": abs_file,
             "function": func_name,
             "start_line": func_def.start_line,
             "end_line": func_def.end_line,
-        })
+        }
+        if scope_entry not in scoped_lines:
+            scoped_lines.append(scope_entry)
 
         if parser_instance and func_def.node:
             invocations = parser_instance.extract_calls(func_def.node, file_meta["source_bytes"])
@@ -159,35 +169,101 @@ class CallGraphBuilder:
 
         return node_info
 
-    def _discover_included_routers(
-        self, root_node: Node, source_bytes: bytes, current_file: str, lang: str
+    def _discover_sub_routers(
+        self,
+        current_file: str,
+        lang: str,
+        visited_files: Optional[Set[str]] = None,
+        base_prefix: str = "",
     ) -> List[Tuple[str, str]]:
-        if lang != "python":
+        if visited_files is None:
+            visited_files = set()
+
+        abs_file = os.path.abspath(current_file)
+        if abs_file in visited_files or not os.path.isfile(abs_file):
+            return []
+        visited_files.add(abs_file)
+
+        parsed = self._load_and_parse_file(abs_file, lang)
+        if not parsed:
             return []
 
-        discovered: List[Tuple[str, str]] = []
-        file_meta = self._get_file_metadata(current_file, lang)
+        root_node, source_bytes, _ = parsed
+        file_meta = self._get_file_metadata(abs_file, lang)
         imports = file_meta.get("imports", {})
 
+        discovered: List[Tuple[str, str]] = []
+
+        def strip_quotes(s: str) -> str:
+            s = s.strip()
+            if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")) or (s.startswith("`") and s.endswith("`")):
+                return s[1:-1]
+            return s
+
         def walk(node: Node):
-            if node.type == "call":
+            # Python: FastAPI include_router / Flask register_blueprint
+            if lang == "python" and node.type == "call":
                 fn_node = node.child_by_field_name("function")
                 args_node = node.child_by_field_name("arguments")
-                if fn_node and fn_node.text.decode("utf-8").endswith("include_router") and args_node:
-                    prefix = ""
-                    router_symbol = ""
-                    for arg in args_node.children:
-                        if arg.type == "keyword_argument":
-                            key_node = arg.child_by_field_name("name")
-                            val_node = arg.child_by_field_name("value")
-                            if key_node and key_node.text.decode("utf-8") == "prefix" and val_node:
-                                prefix = val_node.text.decode("utf-8").strip("\"'")
-                        elif arg.type in ("identifier", "attribute") and not router_symbol:
-                            router_symbol = arg.text.decode("utf-8").split(".")[0]
+                if fn_node and args_node:
+                    fn_text = fn_node.text.decode("utf-8")
+                    is_fastapi = fn_text.endswith("include_router")
+                    is_flask = fn_text.endswith("register_blueprint")
 
-                    target_file = imports.get(router_symbol)
-                    if target_file and os.path.isfile(target_file):
-                        discovered.append((target_file, prefix))
+                    if is_fastapi or is_flask:
+                        prefix = ""
+                        router_symbol = ""
+                        for arg in args_node.children:
+                            if arg.type == "keyword_argument":
+                                key_node = arg.child_by_field_name("name")
+                                val_node = arg.child_by_field_name("value")
+                                if key_node and val_node:
+                                    k_name = key_node.text.decode("utf-8")
+                                    if k_name in ("prefix", "url_prefix"):
+                                        prefix = strip_quotes(val_node.text.decode("utf-8"))
+                                    elif k_name in ("router", "blueprint") and not router_symbol:
+                                        router_symbol = val_node.text.decode("utf-8").split(".")[0]
+                            elif arg.type in ("identifier", "attribute") and not router_symbol:
+                                router_symbol = arg.text.decode("utf-8").split(".")[0]
+                            elif arg.type == "string" and not prefix:
+                                prefix = strip_quotes(arg.text.decode("utf-8"))
+
+                        target_file = imports.get(router_symbol)
+                        if target_file and os.path.isfile(target_file):
+                            combined = f"{base_prefix.rstrip('/')}/{prefix.lstrip('/')}".strip("/")
+                            combined_prefix = f"/{combined}" if combined else ""
+                            discovered.append((target_file, combined_prefix))
+                            # Recursively discover nested routers
+                            nested = self._discover_sub_routers(
+                                target_file, lang, visited_files=visited_files, base_prefix=combined_prefix
+                            )
+                            discovered.extend(nested)
+
+            # JavaScript: Express app.use('/prefix', subRouter) or app.use(subRouter)
+            elif lang == "javascript" and node.type == "call_expression":
+                fn_node = node.child_by_field_name("function")
+                args_node = node.child_by_field_name("arguments")
+                if fn_node and args_node and fn_node.type == "member_expression":
+                    prop = fn_node.child_by_field_name("property")
+                    if prop and prop.text.decode("utf-8") == "use":
+                        prefix = ""
+                        router_sym = ""
+                        for arg in args_node.children:
+                            if arg.type in ("string", "template_string"):
+                                prefix = strip_quotes(arg.text.decode("utf-8"))
+                            elif arg.type == "identifier":
+                                router_sym = arg.text.decode("utf-8")
+
+                        if router_sym and router_sym in imports:
+                            target_file = imports[router_sym]
+                            if os.path.isfile(target_file):
+                                combined = f"{base_prefix.rstrip('/')}/{prefix.lstrip('/')}".strip("/")
+                                combined_prefix = f"/{combined}" if combined else ""
+                                discovered.append((target_file, combined_prefix))
+                                nested = self._discover_sub_routers(
+                                    target_file, lang, visited_files=visited_files, base_prefix=combined_prefix
+                                )
+                                discovered.extend(nested)
 
             for child in node.children:
                 walk(child)
@@ -215,7 +291,7 @@ class CallGraphBuilder:
         root_node, source_bytes, parser_instance = parsed
         routes = parser_instance.extract_routes(root_node, source_bytes, abs_entry)
 
-        sub_routers = self._discover_included_routers(root_node, source_bytes, abs_entry, lang)
+        sub_routers = self._discover_sub_routers(abs_entry, lang)
         for sub_file, prefix in sub_routers:
             sub_parsed = self._load_and_parse_file(sub_file, lang)
             if sub_parsed:
@@ -240,13 +316,38 @@ class CallGraphBuilder:
                 }
             ]
 
-            call_tree = self._trace_branch(
-                func_name=route.function,
-                current_file=route.file,
-                lang=lang,
-                visited=visited_set,
-                scoped_lines=route_scopes,
-            )
+            # If the route has an explicit handler AST node, extract invocations from it directly
+            if route.handler_node:
+                call_tree = {
+                    "name": route.function,
+                    "file": route.file,
+                    "external": False,
+                    "calls": [],
+                    "start_line": route.start_line,
+                    "end_line": route.end_line,
+                }
+                visited_set.add((route.file, route.function))
+                route_file_meta = self._get_file_metadata(route.file, lang)
+                invocations = parser_instance.extract_calls(route.handler_node, route_file_meta["source_bytes"])
+                for call_raw, call_line in invocations:
+                    clean_name = call_raw.strip()
+                    child_branch = self._trace_branch(
+                        func_name=clean_name,
+                        current_file=route.file,
+                        lang=lang,
+                        visited=visited_set,
+                        scoped_lines=route_scopes,
+                    )
+                    child_branch["invoked_at_line"] = call_line
+                    call_tree["calls"].append(child_branch)
+            else:
+                call_tree = self._trace_branch(
+                    func_name=route.function,
+                    current_file=route.file,
+                    lang=lang,
+                    visited=visited_set,
+                    scoped_lines=route_scopes,
+                )
 
             route.call_graph = call_tree
             route.scoped_lines = route_scopes

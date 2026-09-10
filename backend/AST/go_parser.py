@@ -41,10 +41,11 @@ class GoParser(BaseLanguageParser):
                     field_node = fn_node.child_by_field_name("field")
                     if field_node:
                         method_name = field_node.text.decode("utf-8").upper()
-                        if method_name in HTTP_METHODS or method_name in ("HANDLE", "HANDLEFUNC"):
+                        if method_name in HTTP_METHODS or method_name in ("HANDLE", "HANDLEFUNC", "GET", "POST", "PUT", "DELETE", "PATCH"):
                             method = "GET" if method_name in ("HANDLE", "HANDLEFUNC") else method_name
                             path = "/"
                             handler_name = "<anonymous>"
+                            handler_node = None
 
                             for arg in args_node.children:
                                 if arg.type in ("interpreted_string_literal", "raw_string_literal"):
@@ -52,7 +53,8 @@ class GoParser(BaseLanguageParser):
                                 elif arg.type == "identifier":
                                     handler_name = arg.text.decode("utf-8")
                                 elif arg.type == "func_literal":
-                                    handler_name = "<inline_func>"
+                                    handler_name = f"<inline_{method.lower()}_{path.replace('/', '_').strip('_')}>"
+                                    handler_node = arg
 
                             routes.append(
                                 RouteNode(
@@ -62,6 +64,7 @@ class GoParser(BaseLanguageParser):
                                     file=file_path,
                                     start_line=node.start_point[0] + 1,
                                     end_line=node.end_point[0] + 1,
+                                    handler_node=handler_node,
                                 )
                             )
 
@@ -81,13 +84,12 @@ class GoParser(BaseLanguageParser):
                     fn_name = name_node.text.decode("utf-8")
                     start_line = node.start_point[0] + 1
                     end_line = node.end_point[0] + 1
-                    body_node = node.child_by_field_name("body")
                     funcs[fn_name] = FunctionDefInfo(
                         name=fn_name,
                         file=file_path,
                         start_line=start_line,
                         end_line=end_line,
-                        node=body_node,
+                        node=node,
                     )
 
             for child in node.children:
@@ -116,4 +118,45 @@ class GoParser(BaseLanguageParser):
 
     def resolve_local_imports(self, root_node: Node, source_bytes: bytes, current_file: str, repo_root: str) -> Dict[str, str]:
         imports: Dict[str, str] = {}
+        current_dir = os.path.dirname(os.path.abspath(current_file))
+        repo_root_abs = os.path.abspath(repo_root) if repo_root else current_dir
+
+        mod_name = ""
+        go_mod_path = os.path.join(repo_root_abs, "go.mod")
+        if os.path.isfile(go_mod_path):
+            try:
+                with open(go_mod_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("module "):
+                            mod_name = line.split()[1].strip()
+                            break
+            except Exception:
+                pass
+
+        def walk(node: Node):
+            if node.type == "import_spec":
+                path_node = node.child_by_field_name("path")
+                alias_node = node.child_by_field_name("name")
+                if path_node:
+                    pkg_path = self._strip_quotes(path_node.text.decode("utf-8"))
+                    alias = alias_node.text.decode("utf-8") if alias_node else os.path.basename(pkg_path)
+
+                    target_dir = None
+                    if pkg_path.startswith("./") or pkg_path.startswith("../"):
+                        target_dir = os.path.normpath(os.path.join(current_dir, pkg_path))
+                    elif mod_name and pkg_path.startswith(mod_name):
+                        rel = pkg_path[len(mod_name):].lstrip("/")
+                        target_dir = os.path.join(repo_root_abs, rel)
+
+                    if target_dir and os.path.isdir(target_dir):
+                        for entry in os.listdir(target_dir):
+                            if entry.endswith(".go") and not entry.endswith("_test.go"):
+                                imports[alias] = os.path.abspath(os.path.join(target_dir, entry))
+                                break
+
+            for child in node.children:
+                walk(child)
+
+        walk(root_node)
         return imports

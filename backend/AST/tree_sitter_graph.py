@@ -39,6 +39,7 @@ class RouteNode:
     end_line: int
     call_graph: Dict[str, Any] = field(default_factory=dict)
     scoped_lines: List[Dict[str, Any]] = field(default_factory=list)
+    handler_node: Any = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
