@@ -5,4 +5,6 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  background-color: #141312;
+  overflow-x: hidden;
 }
