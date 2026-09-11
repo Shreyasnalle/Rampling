@@ -1,5 +1,7 @@
-import App from "../app";
-
 export default function Home() {
-  return <App />;
+  return (
+    <main className="min-h-screen flex items-center justify-center">
+      <h1 className="text-2xl font-medium">Rampling</h1>
+    </main>
+  );
 }
