@@ -1,3 +1,5 @@
+import LandingPage from "@/pages/landingpage/landingpage";
+
 export default function Home() {
-  return <main className="min-h-screen w-full bg-white" />;
+  return <LandingPage />;
 }
