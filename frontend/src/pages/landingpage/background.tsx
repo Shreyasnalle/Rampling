@@ -8,7 +8,7 @@ import { TypewriterWord } from "@/components/ui/typewriter-effect";
 
 export default function BackgroundHero() {
   return (
-    <div className="relative w-full h-full min-h-screen flex items-center justify-center overflow-hidden bg-neutral-950">
+    <div className="relative w-full h-full min-h-screen flex items-center justify-center overflow-hidden bg-[#060608]">
       {/* Interactive Aurora WebGL Background Canvas */}
       <div className="absolute inset-0 w-full h-full pointer-events-none">
         <Aurora
@@ -42,18 +42,50 @@ export default function BackgroundHero() {
                 fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
               }}
             >
-              Know how your code{" "}
-              <TypewriterWord
-                words={["performs", "scales", "breaks", "responds"]}
-                className="inline-block text-transparent bg-clip-text"
-                style={{
-                  backgroundImage: "linear-gradient(to right, #7cff67, #B497CF, #5227FF)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-                cursorClassName="bg-[#7cff67] shadow-[0_0_8px_#7cff67]"
-              />{" "}
-              before your users do.
+              {[
+                { id: "know", text: "Know" },
+                { id: "how", text: "how" },
+                { id: "your1", text: "your" },
+                { id: "code", text: "code" },
+                { id: "typewriter", isTypewriter: true },
+                { id: "before", text: "before" },
+                { id: "your2", text: "your" },
+                { id: "users", text: "users" },
+                { id: "do", text: "do." },
+              ].map((item, idx, arr) => (
+                <motion.span
+                  key={item.id}
+                  initial={{ opacity: 0, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  transition={{
+                    duration: 0.35,
+                    delay: 0.12 + idx * 0.065,
+                    ease: "easeOut",
+                  }}
+                  className="inline-block"
+                >
+                  {item.isTypewriter ? (
+                    <span className="inline-block mr-[0.26em]">
+                      <TypewriterWord
+                        words={["performs", "scales", "breaks", "responds"]}
+                        startDelay={380}
+                        className="inline-block text-transparent bg-clip-text"
+                        style={{
+                          backgroundImage: "linear-gradient(to right, #7cff67, #B497CF, #5227FF)",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                        }}
+                        cursorClassName="bg-[#7cff67] shadow-[0_0_8px_#7cff67]"
+                      />
+                    </span>
+                  ) : (
+                    <span>
+                      {item.text}
+                      {idx < arr.length - 1 ? "\u00A0" : ""}
+                    </span>
+                  )}
+                </motion.span>
+              ))}
             </h1>
 
             {/* Bleak divider matching border color without hover, animating left to right */}

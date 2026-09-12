@@ -191,6 +191,7 @@ export interface TypewriterWordProps {
   typingSpeed?: number;
   deletingSpeed?: number;
   pauseDuration?: number;
+  startDelay?: number;
   className?: string;
   style?: React.CSSProperties;
   cursorClassName?: string;
@@ -201,6 +202,7 @@ export const TypewriterWord = ({
   typingSpeed = 110,
   deletingSpeed = 60,
   pauseDuration = 2000,
+  startDelay = 0,
   className,
   style,
   cursorClassName,
@@ -217,9 +219,13 @@ export const TypewriterWord = ({
 
     if (!isDeleting) {
       if (currentText.length < currentFullWord.length) {
+        const delayTime =
+          currentText.length === 0 && wordIndex === 0 && startDelay > 0
+            ? startDelay
+            : typingSpeed;
         timer = setTimeout(() => {
           setCurrentText(currentFullWord.slice(0, currentText.length + 1));
-        }, typingSpeed);
+        }, delayTime);
       } else {
         timer = setTimeout(() => {
           setIsDeleting(true);
@@ -237,7 +243,7 @@ export const TypewriterWord = ({
     }
 
     return () => clearTimeout(timer);
-  }, [currentText, isDeleting, wordIndex, words, typingSpeed, deletingSpeed, pauseDuration]);
+  }, [currentText, isDeleting, wordIndex, words, typingSpeed, deletingSpeed, pauseDuration, startDelay]);
 
   return (
     <span className="inline-flex items-baseline whitespace-nowrap">

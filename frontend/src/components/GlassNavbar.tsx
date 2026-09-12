@@ -11,7 +11,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: "Features", link: "#features" },
-  { name: "Pricing", link: "#pricing" },
   { name: "Contact", link: "#contact" },
 ];
 
@@ -19,12 +18,12 @@ export default function GlassNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="fixed inset-x-0 top-5 z-50 flex justify-center px-4 pointer-events-none">
-      <div className="w-full max-w-5xl pointer-events-auto">
+    <header className="absolute inset-x-0 top-5 z-50 flex justify-center px-4 pointer-events-none">
+      <div className="w-full max-w-5xl pointer-events-auto flex justify-center">
         {/* Desktop Navbar */}
-        <div className="hidden md:block w-full">
+        <div className="hidden md:flex justify-center w-full">
           <GlassSurface
-            width="100%"
+            width="80%"
             height={68}
             borderRadius={20}
             displace={0.5}
@@ -37,18 +36,20 @@ export default function GlassNavbar() {
             backgroundOpacity={0.08}
             blur={25}
             mixBlendMode="screen"
-            className="w-full shadow-[0_8px_32px_rgba(0,0,0,0.37)] border border-white/15 backdrop-blur-xl"
+            className="shadow-[0_8px_32px_rgba(0,0,0,0.37)] border border-white/15 backdrop-blur-xl mx-auto"
           >
             <div className="flex w-full items-center justify-between px-6">
-              {/* Logo */}
-              <a href="#" className="flex items-center gap-2.5 group">
-                <span className="font-semibold text-xl tracking-tight text-white drop-shadow-sm group-hover:text-white/90 transition-colors">
-                  Rampling
-                </span>
-              </a>
+              {/* Rampling Logo at extreme left */}
+              <div className="flex-1 flex justify-start">
+                <a href="#" className="flex items-center gap-2.5 group">
+                  <span className="font-semibold text-xl tracking-tight text-white drop-shadow-sm group-hover:text-white/90 transition-colors">
+                    Rampling
+                  </span>
+                </a>
+              </div>
 
-              {/* Nav Items */}
-              <nav className="flex items-center gap-8">
+              {/* Features and Contact exactly at the center of the navbar */}
+              <nav className="flex items-center justify-center gap-8">
                 {navItems.map((item) => (
                   <a
                     key={item.name}
@@ -60,27 +61,30 @@ export default function GlassNavbar() {
                 ))}
               </nav>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors"
+              {/* White Github Button with black text and div border effect */}
+              <div className="flex-1 flex justify-end">
+                <a
+                  href="https://github.com/Shreyasnalle/Rampling"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-1.5 text-sm font-semibold text-neutral-950 hover:bg-neutral-100 rounded-full transition-colors shadow-sm"
+                  style={{
+                    border: "1px solid transparent",
+                    background: [
+                      "linear-gradient(#ffffff, #ffffff) padding-box",
+                      "linear-gradient(135deg, #c084fc88, #f472b688, #38bdf888) border-box",
+                    ].join(", "),
+                  }}
                 >
-                  Login
-                </button>
-                <button
-                  type="button"
-                  className="px-5 py-2 text-sm font-semibold text-neutral-950 bg-white hover:bg-neutral-100 rounded-full transition-all shadow-md shadow-black/20 hover:scale-105 active:scale-95"
-                >
-                  Book a call
-                </button>
+                  Github
+                </a>
               </div>
             </div>
           </GlassSurface>
         </div>
 
         {/* Mobile Navbar */}
-        <div className="md:hidden w-full">
+        <div className="md:hidden w-full flex justify-center">
           <GlassSurface
             width="100%"
             height={isMobileMenuOpen ? "auto" : 60}
@@ -99,42 +103,45 @@ export default function GlassNavbar() {
                 <a href="#" className="flex items-center gap-2">
                   <span className="font-semibold text-lg text-white">Rampling</span>
                 </a>
-                <button
-                  type="button"
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="p-1.5 text-white/80 hover:text-white"
-                  aria-label="Toggle menu"
-                >
-                  {isMobileMenuOpen ? <IconX size={22} /> : <IconMenu2 size={22} />}
-                </button>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://github.com/Shreyasnalle/Rampling"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 text-xs font-semibold text-neutral-950 hover:bg-neutral-100 rounded-full transition-colors"
+                    style={{
+                      border: "1px solid transparent",
+                      background: [
+                        "linear-gradient(#ffffff, #ffffff) padding-box",
+                        "linear-gradient(135deg, #c084fc88, #f472b688, #38bdf888) border-box",
+                      ].join(", "),
+                    }}
+                  >
+                    Github
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    className="p-1.5 text-white/80 hover:text-white"
+                    aria-label="Toggle menu"
+                  >
+                    {isMobileMenuOpen ? <IconX size={22} /> : <IconMenu2 size={22} />}
+                  </button>
+                </div>
               </div>
 
               {isMobileMenuOpen && (
-                <div className="flex flex-col gap-4 pt-5 pb-2 border-t border-white/10 mt-3">
+                <div className="flex flex-col gap-3 pt-4 pb-2 border-t border-white/10 mt-3">
                   {navItems.map((item) => (
                     <a
                       key={item.name}
                       href={item.link}
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-sm font-medium text-white/80 hover:text-white py-1"
+                      className="text-sm font-medium text-white/80 hover:text-white py-1 transition-colors"
                     >
                       {item.name}
                     </a>
                   ))}
-                  <div className="flex flex-col gap-2 pt-2">
-                    <button
-                      type="button"
-                      className="w-full py-2.5 text-sm font-medium text-white/80 border border-white/20 rounded-xl hover:bg-white/10"
-                    >
-                      Login
-                    </button>
-                    <button
-                      type="button"
-                      className="w-full py-2.5 text-sm font-semibold text-neutral-950 bg-white rounded-xl hover:bg-neutral-100"
-                    >
-                      Book a call
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { ChromaticImage } from "@/components/ui/chromatic-image";
 
 const leftFeatures = [
@@ -38,19 +39,19 @@ function FeatureColumn({
   features: typeof leftFeatures;
 }) {
   return (
-    <dl className="grid h-full grid-rows-2 divide-y divide-black/10 dark:divide-white/10">
+    <dl className="grid h-full grid-rows-2 divide-y divide-white/10">
       {features.map((feature) => (
         <div
           key={feature.number}
-          className="flex min-h-48 flex-col justify-between gap-8 p-6 sm:p-8"
+          className="flex min-h-36 flex-col justify-between gap-4 p-6 sm:p-8"
         >
           <dt className="flex items-start justify-between gap-4">
-            <span className="text-lg font-medium">{feature.title}</span>
-            <span className="font-mono text-sm tracking-wide text-neutral-400 tabular-nums dark:text-neutral-500">
+            <span className="text-lg font-medium text-white">{feature.title}</span>
+            <span className="font-mono text-sm tracking-wide text-neutral-400 tabular-nums">
               {feature.number}
             </span>
           </dt>
-          <dd className="max-w-[40ch] text-pretty text-base/7 text-neutral-600 dark:text-neutral-400 sm:text-sm/6">
+          <dd className="max-w-[40ch] text-pretty text-sm/6 text-neutral-400">
             {feature.description}
           </dd>
         </div>
@@ -65,33 +66,48 @@ export default function ChromaticImageBentoFeaturesDemo({
   className?: string;
 }) {
   return (
-    <div className={`w-[60vw] max-w-[60%] h-[60vh] max-h-[60%] flex items-center justify-center p-2 ${className ?? ""}`}>
-      <section className="flex flex-col h-full w-full overflow-hidden rounded-[min(1.5vw,18px)] bg-white text-neutral-950 outline-1 -outline-offset-1 outline-black/10 dark:bg-neutral-900 dark:text-neutral-50 dark:outline-white/10 shadow-xl">
-        <div className="shrink-0 border-b border-black/10 px-5 py-3 dark:border-white/10 sm:px-6 sm:py-3.5">
-          <p className="font-mono text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
+    <div
+      className={`relative w-[70vw] h-[80vh] max-w-[70vw] max-h-[80vh] md:w-[70%] md:h-[80%] rounded-[28px] overflow-hidden shadow-2xl ${className ?? ""}`}
+      style={{
+        border: "1px solid transparent",
+        background: [
+          "linear-gradient(#000000, #000000) padding-box",
+          "linear-gradient(135deg, rgba(192, 132, 252, 0.75), rgba(244, 114, 182, 0.75), rgba(56, 189, 248, 0.75)) border-box",
+        ].join(", "),
+        boxShadow: "0 25px 60px -15px rgba(0, 0, 0, 0.35)",
+      }}
+    >
+      <section
+        className="flex flex-col h-full w-full overflow-hidden text-white rounded-[27px] bg-black"
+        style={{
+          backgroundColor: "#000000",
+        }}
+      >
+        <div className="shrink-0 border-b border-white/10 px-6 py-4 bg-black">
+          <p className="font-mono text-xs tracking-wide text-neutral-400 uppercase">
             Built for expressive media
           </p>
-          <h3 className="max-w-[24ch] pt-0.5 text-balance text-xl font-medium tracking-tight sm:text-2xl">
+          <h3 className="max-w-[30ch] pt-1 text-balance text-xl sm:text-2xl font-semibold text-white tracking-tight">
             One image, four useful capabilities
           </h3>
         </div>
-        <div className="grid flex-1 min-h-0 lg:grid-cols-[3fr_4fr_3fr]">
-          <div className="order-2 overflow-y-auto border-black/10 dark:border-white/10 lg:order-1 lg:border-r">
+        <div className="grid flex-1 min-h-0 lg:grid-cols-[3fr_4fr_3fr] bg-black">
+          <div className="order-2 overflow-y-auto border-white/10 lg:order-1 lg:border-r bg-black">
             <FeatureColumn features={leftFeatures} />
           </div>
-          <div className="order-1 flex h-full w-full items-center justify-center bg-stone-950 lg:order-2">
+          <div className="order-1 flex h-full w-full items-center justify-center bg-black overflow-hidden lg:order-2">
             <ChromaticImage
-              src="/images/cold-light-blurry-horizon.webp"
-              alt="Cold Light Blurry Horizon"
-              backgroundColor="#0a0a14"
+              src="/images/aurora.webp"
+              alt="Aurora"
+              backgroundColor="#000000"
               zoom={0}
               displacement={0.02}
               chromaticShift={0.007}
               tilt={0.1}
-              className="h-full w-full"
+              className="h-full w-full object-cover"
             />
           </div>
-          <div className="order-3 overflow-y-auto border-t border-black/10 dark:border-white/10 lg:border-t-0 lg:border-l">
+          <div className="order-3 overflow-y-auto border-t border-white/10 lg:border-t-0 lg:border-l bg-black">
             <FeatureColumn features={rightFeatures} />
           </div>
         </div>
