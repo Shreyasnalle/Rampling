@@ -326,7 +326,7 @@ export function ChromaticImage({
         ref={canvasRef}
         aria-hidden="true"
         className={cn(
-          "absolute -inset-[2.5%] size-[105%] will-change-transform transition-opacity duration-300",
+          "absolute inset-0 size-full will-change-transform transition-opacity duration-300",
           ready ? "opacity-100" : "opacity-0",
         )}
       />

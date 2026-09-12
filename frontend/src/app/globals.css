@@ -4,7 +4,61 @@
 @import "tw-animate-css";
 @import "../../node_modules/shadcn/dist/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/**
+* @license
+*
+* Font Family: Stardom
+* Designed by: Indian Type Foundry
+* URL: https://www.fontshare.com/fonts/stardom
+* © 2026 Indian Type Foundry
+*
+* Stardom Regular 
+*/
+@font-face {
+  font-family: 'Stardom-Regular';
+  src: url('/fonts/Stardom-Regular.woff2') format('woff2'),
+       url('/fonts/Stardom-Regular.woff') format('woff'),
+       url('/fonts/Stardom-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rowan-Regular';
+  src: url('/fonts/Rowan-Regular.woff2') format('woff2'),
+       url('/fonts/Rowan-Regular.woff') format('woff'),
+       url('/fonts/Rowan-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rowan-Semibold';
+  src: url('/fonts/Rowan-Semibold.woff2') format('woff2'),
+       url('/fonts/Rowan-Semibold.woff') format('woff'),
+       url('/fonts/Rowan-Semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-display: swap;
+  font-style: normal;
+}
+
+.font-stardom {
+  font-family: 'Stardom-Regular', sans-serif;
+}
+
+.font-rowan-regular {
+  font-family: 'Rowan-Regular', serif;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0, "liga" 0, "dlig" 0;
+}
+
+.font-rowan-semibold {
+  font-family: 'Rowan-Semibold', serif;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0, "liga" 0, "dlig" 0;
+}
 
 html,
 body {
@@ -12,11 +66,15 @@ body {
   padding: 0;
   min-height: 100vh;
   background-color: #ffffff;
+  font-family: 'Stardom-Regular', sans-serif;
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --font-sans: 'Stardom-Regular', sans-serif;
+  --font-heading: 'Stardom-Regular', sans-serif;
+  --font-rowan-regular: 'Rowan-Regular', serif;
+  --font-rowan-semibold: 'Rowan-Semibold', serif;
+  --font-stardom: 'Stardom-Regular', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -132,8 +190,10 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Stardom-Regular', sans-serif;
   }
   html {
     @apply font-sans;
+    font-family: 'Stardom-Regular', sans-serif;
   }
 }
