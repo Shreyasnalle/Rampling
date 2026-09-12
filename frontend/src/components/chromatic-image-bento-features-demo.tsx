@@ -59,33 +59,39 @@ function FeatureColumn({
   );
 }
 
-export default function ChromaticImageBentoFeaturesDemo() {
+export default function ChromaticImageBentoFeaturesDemo({
+  className,
+}: {
+  className?: string;
+}) {
   return (
-    <div className="w-full p-6 sm:p-10">
-      <section className="overflow-hidden rounded-[min(1.5vw,18px)] bg-white text-neutral-950 outline-1 -outline-offset-1 outline-black/10 dark:bg-neutral-900 dark:text-neutral-50 dark:outline-white/10">
-        <div className="border-b border-black/10 p-6 dark:border-white/10 sm:p-8">
-          <p className="font-mono text-sm tracking-wide text-neutral-500 dark:text-neutral-400">
+    <div className={`w-[60vw] max-w-[60%] h-[60vh] max-h-[60%] flex items-center justify-center p-2 ${className ?? ""}`}>
+      <section className="flex flex-col h-full w-full overflow-hidden rounded-[min(1.5vw,18px)] bg-white text-neutral-950 outline-1 -outline-offset-1 outline-black/10 dark:bg-neutral-900 dark:text-neutral-50 dark:outline-white/10 shadow-xl">
+        <div className="shrink-0 border-b border-black/10 px-5 py-3 dark:border-white/10 sm:px-6 sm:py-3.5">
+          <p className="font-mono text-xs tracking-wide text-neutral-500 dark:text-neutral-400">
             Built for expressive media
           </p>
-          <h3 className="max-w-[18ch] pt-3 text-balance text-3xl font-medium tracking-tight sm:text-4xl">
+          <h3 className="max-w-[24ch] pt-0.5 text-balance text-xl font-medium tracking-tight sm:text-2xl">
             One image, four useful capabilities
           </h3>
         </div>
-        <div className="grid lg:grid-cols-[3fr_4fr_3fr]">
-          <div className="order-2 border-black/10 dark:border-white/10 lg:order-1 lg:border-r">
+        <div className="grid flex-1 min-h-0 lg:grid-cols-[3fr_4fr_3fr]">
+          <div className="order-2 overflow-y-auto border-black/10 dark:border-white/10 lg:order-1 lg:border-r">
             <FeatureColumn features={leftFeatures} />
           </div>
-          <ChromaticImage
-            src="https://assets.aceternity.com/screenshots/green-dither-2.webp"
-            alt="Green dithered abstract gradient"
-            backgroundColor="#9cae65"
-            zoom={0.14}
-            displacement={0.035}
-            chromaticShift={0.009}
-            tilt={0.14}
-            className="order-1 aspect-[4/5] min-h-96 bg-stone-300 dark:bg-neutral-800 lg:order-2 lg:aspect-auto lg:min-h-[42rem]"
-          />
-          <div className="order-3 border-t border-black/10 dark:border-white/10 lg:border-t-0 lg:border-l">
+          <div className="order-1 flex h-full w-full items-center justify-center bg-stone-950 lg:order-2">
+            <ChromaticImage
+              src="/images/cold-light-blurry-horizon.webp"
+              alt="Cold Light Blurry Horizon"
+              backgroundColor="#0a0a14"
+              zoom={0}
+              displacement={0.02}
+              chromaticShift={0.007}
+              tilt={0.1}
+              className="h-full w-full"
+            />
+          </div>
+          <div className="order-3 overflow-y-auto border-t border-black/10 dark:border-white/10 lg:border-t-0 lg:border-l">
             <FeatureColumn features={rightFeatures} />
           </div>
         </div>
