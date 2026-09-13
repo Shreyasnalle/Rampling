@@ -76,9 +76,9 @@ export default function BackgroundHero() {
             colors={['#AC8968', '#865D36', '#93785B', '#A69080', '#3E362E']}
             className="w-full"
           >
-            <div className="p-5 sm:p-10 md:p-14 text-center flex flex-col items-center justify-center">
+            <div className="p-5 sm:p-10 md:p-14 text-center flex flex-col items-center justify-center min-h-[365px] sm:min-h-0">
               <h1
-                className="text-balance text-2xl sm:text-4xl lg:text-6xl font-semibold text-white leading-[1.16] sm:leading-[1.14] font-rowan-semibold"
+                className="text-balance text-2xl sm:text-4xl lg:text-6xl font-semibold text-white leading-[1.16] sm:leading-[1.14] font-rowan-semibold min-h-[84px] sm:min-h-0"
                 style={{
                   fontFamily: "'Rowan-Semibold', serif",
                   fontVariantLigatures: 'none',

@@ -246,14 +246,14 @@ export const TypewriterWord = ({
   }, [currentText, isDeleting, wordIndex, words, typingSpeed, deletingSpeed, pauseDuration, startDelay]);
 
   return (
-    <span className="inline-flex items-baseline whitespace-nowrap">
+    <span className="inline-block min-w-[7.2ch] sm:min-w-0 text-left whitespace-nowrap">
       <span className={cn("inline-block", className)} style={style}>
         {currentText || "\u200B"}
       </span>
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block w-[2.5px] sm:w-[3.5px] h-[0.78em] ml-1 bg-[#7cff67] rounded-xs animate-pulse self-center",
+          "inline-block w-[2.5px] sm:w-[3.5px] h-[0.78em] ml-1 bg-[#7cff67] rounded-xs animate-pulse self-center align-baseline",
           cursorClassName
         )}
       />

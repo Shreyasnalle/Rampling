@@ -577,8 +577,8 @@ export default function ChromaticImageBentoFeaturesDemo({
                   ))}
                 </div>
 
-                {/* Active Feature Details Card */}
-                <div className="relative flex-1 min-h-[110px] flex flex-col justify-center bg-white/[0.03] border border-[#93785B]/30 rounded-xl p-3.5 sm:p-4 overflow-hidden">
+                {/* Active Feature Details Card (fixed height so card size stays constant) */}
+                <div className="relative h-[126px] min-h-[126px] max-h-[126px] shrink-0 flex flex-col justify-start bg-white/[0.03] border border-[#93785B]/30 rounded-xl p-3.5 sm:p-4 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={activeMobileFeature}
@@ -612,45 +612,22 @@ export default function ChromaticImageBentoFeaturesDemo({
                   </AnimatePresence>
                 </div>
 
-                {/* Next / Prev Navigation dots & button */}
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-1.5">
+                {/* Centered navigation dots (arrows removed) */}
+                <div className="flex items-center justify-center pt-2 pb-1 shrink-0">
+                  <div className="flex items-center gap-2">
                     {allFeatures.map((_, idx) => (
-                      <span
+                      <button
                         key={idx}
+                        type="button"
+                        onClick={() => setActiveMobileFeature(idx)}
+                        aria-label={`Go to feature ${idx + 1}`}
                         className={`h-1.5 rounded-full transition-all duration-300 ${
                           activeMobileFeature === idx
-                            ? "w-4 bg-gradient-to-r from-[#AC8968] to-[#865D36]"
-                            : "w-1.5 bg-white/20"
+                            ? "w-5 bg-gradient-to-r from-[#AC8968] to-[#865D36]"
+                            : "w-1.5 bg-white/25 hover:bg-white/50"
                         }`}
                       />
                     ))}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveMobileFeature((prev) =>
-                          prev === 0 ? allFeatures.length - 1 : prev - 1
-                        )
-                      }
-                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-[#93785B]/30 hover:border-[#AC8968] text-xs px-2"
-                      aria-label="Previous feature"
-                    >
-                      ←
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setActiveMobileFeature((prev) =>
-                          prev === allFeatures.length - 1 ? 0 : prev + 1
-                        )
-                      }
-                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-[#93785B]/30 hover:border-[#AC8968] text-xs px-2"
-                      aria-label="Next feature"
-                    >
-                      →
-                    </button>
                   </div>
                 </div>
               </div>

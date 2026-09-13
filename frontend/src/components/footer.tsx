@@ -157,7 +157,8 @@ export function Footer() {
         </div>
 
         {/* 2. Then raise the glassbar with heart first to its horizontal position, then expand it to show "Made with ❤️ by Shreyas Nalle" in Rowan Medium */}
-        <div className="flex justify-center w-full pt-2">
+        {/* Desktop / Laptop Footer Glassbar (Restored to previous values) */}
+        <div className="hidden md:flex justify-center w-full pt-2">
           <motion.div
             initial={{ y: 45, opacity: 0, width: 44 }}
             animate={isInView ? { y: 0, opacity: 1, width: 252 } : { y: 45, opacity: 0, width: 44 }}
@@ -182,10 +183,9 @@ export function Footer() {
               backgroundOpacity={0.08}
               blur={20}
               mixBlendMode="screen"
-              className="shadow-[0_8px_32px_rgba(0,0,0,0.37),0_0_16px_rgba(172,137,104,0.15)] border border-[#865D36]/40 hover:border-[#AC8968]/70 transition-colors backdrop-blur-xl flex items-center justify-center w-full"
+              className="shadow-[0_8px_32px_rgba(0,0,0,0.37),0_0_16px_rgba(172,137,104,0.15)] border border-[#865D36]/40 backdrop-blur-xl flex items-center justify-center w-full"
             >
               <div className="flex items-center justify-center whitespace-nowrap select-none font-rowan-medium text-xs sm:text-sm text-white/95">
-                {/* Left wing: "Made with" reveals FIRST as the glassbar expands */}
                 <motion.div
                   initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
                   animate={
@@ -213,15 +213,100 @@ export function Footer() {
                     Made with
                   </span>
                 </motion.div>
-
-                {/* Center: Heart (always centered in compact 44px pill) */}
                 <div className="shrink-0 flex items-center justify-center select-none px-1">
-                  <span className="text-red-500 text-sm leading-none">
-                    ❤️
-                  </span>
+                  <span className="text-red-500 text-sm leading-none">❤️</span>
                 </div>
+                <motion.div
+                  initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
+                  animate={
+                    isInView
+                      ? { opacity: 1, maxWidth: 135, x: 0, filter: "blur(0px)" }
+                      : { opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }
+                  }
+                  transition={{
+                    maxWidth: { delay: 0.8, duration: 0.4, ease: "easeOut" },
+                    opacity: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                    x: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                    filter: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                  }}
+                  className="overflow-hidden flex items-center justify-start shrink-0"
+                >
+                  <span
+                    className="font-rowan-medium text-xs sm:text-sm text-white/95 whitespace-nowrap pl-1.5 select-none"
+                    style={{
+                      fontFamily: "'Rowan-Medium', serif",
+                      fontWeight: 500,
+                      fontVariantLigatures: 'none',
+                      fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
+                    }}
+                  >
+                    by Shreyas Nalle
+                  </span>
+                </motion.div>
+              </div>
+            </GlassSurface>
+          </motion.div>
+        </div>
 
-                {/* Right wing: "by Shreyas Nalle" reveals SECOND after "Made with" is settled */}
+        {/* Mobile Footer Glassbar (Independently customizable for mobile) */}
+        <div className="md:hidden flex justify-center w-full pt-2">
+          <motion.div
+            initial={{ y: 45, opacity: 0, width: 44 }}
+            animate={isInView ? { y: 0, opacity: 1, width: 252 } : { y: 45, opacity: 0, width: 44 }}
+            transition={{
+              y: { delay: 0.3, duration: 0.45, ease: "easeOut" },
+              opacity: { delay: 0.3, duration: 0.3, ease: "easeOut" },
+              width: { delay: 0.75, duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+            }}
+            className="flex justify-center mx-auto overflow-hidden rounded-[22px] min-w-0 max-w-[92vw]"
+          >
+            <GlassSurface
+              width="100%"
+              height={44}
+              borderRadius={22}
+              displace={0.4}
+              distortionScale={-160}
+              redOffset={50}
+              greenOffset={30}
+              blueOffset={10}
+              brightness={75}
+              opacity={0.92}
+              backgroundOpacity={0.08}
+              blur={20}
+              mixBlendMode="screen"
+              className="shadow-[0_8px_32px_rgba(0,0,0,0.37),0_0_16px_rgba(172,137,104,0.15)] border border-[#865D36]/40 backdrop-blur-xl flex items-center justify-center w-full"
+            >
+              <div className="flex items-center justify-center whitespace-nowrap select-none font-rowan-medium text-xs sm:text-sm text-white/95">
+                <motion.div
+                  initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
+                  animate={
+                    isInView
+                      ? { opacity: 1, maxWidth: 85, x: 0, filter: "blur(0px)" }
+                      : { opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }
+                  }
+                  transition={{
+                    maxWidth: { delay: 0.75, duration: 0.4, ease: "easeOut" },
+                    opacity: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                    x: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                    filter: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                  }}
+                  className="overflow-hidden flex items-center justify-end shrink-0"
+                >
+                  <span
+                    className="font-rowan-medium text-xs sm:text-sm text-white/95 whitespace-nowrap pr-1.5 select-none"
+                    style={{
+                      fontFamily: "'Rowan-Medium', serif",
+                      fontWeight: 500,
+                      fontVariantLigatures: 'none',
+                      fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
+                    }}
+                  >
+                    Made with
+                  </span>
+                </motion.div>
+                <div className="shrink-0 flex items-center justify-center select-none px-1">
+                  <span className="text-red-500 text-sm leading-none">❤️</span>
+                </div>
                 <motion.div
                   initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
                   animate={
