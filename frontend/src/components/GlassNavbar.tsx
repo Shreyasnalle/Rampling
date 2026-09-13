@@ -35,6 +35,13 @@ const navItems: NavItem[] = [
 export default function GlassNavbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: string) => {
+    if (link === "#features") {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("rampling:features-clicked"));
+    }
+  };
+
   return (
     <header className="absolute inset-x-0 top-5 z-50 flex justify-center px-4 pointer-events-none">
       <div className="w-full max-w-5xl pointer-events-auto flex justify-center">
@@ -76,9 +83,10 @@ export default function GlassNavbar() {
                       className="size-8 rounded-lg object-contain pointer-events-none shrink-0"
                     />
                     <span
-                      className="font-semibold text-xl tracking-tight text-white drop-shadow-sm font-rowan-semibold cursor-default select-none shrink-0"
+                      className="font-bold text-xl tracking-tight text-white drop-shadow-sm font-rowan-bold cursor-default select-none shrink-0"
                       style={{
-                        fontFamily: "'Rowan-Semibold', serif",
+                        fontFamily: "'Rowan-Bold', 'Rowan-Semibold', serif",
+                        fontWeight: 700,
                         fontVariantLigatures: 'none',
                         fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
                       }}
@@ -94,6 +102,7 @@ export default function GlassNavbar() {
                     <motion.a
                       key={item.name}
                       href={item.link}
+                      onClick={(e) => handleNavClick(e, item.link)}
                       initial={{ opacity: 0, filter: "blur(12px)", x: -14 }}
                       animate={{ opacity: 1, filter: "blur(0px)", x: 0 }}
                       transition={{
@@ -176,9 +185,10 @@ export default function GlassNavbar() {
                     className="size-7 rounded-lg object-contain pointer-events-none"
                   />
                   <span
-                    className="font-semibold text-lg text-white font-rowan-semibold cursor-default select-none"
+                    className="font-bold text-lg text-white font-rowan-bold cursor-default select-none"
                     style={{
-                      fontFamily: "'Rowan-Semibold', serif",
+                      fontFamily: "'Rowan-Bold', 'Rowan-Semibold', serif",
+                      fontWeight: 700,
                       fontVariantLigatures: 'none',
                       fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
                     }}
@@ -222,7 +232,10 @@ export default function GlassNavbar() {
                     <a
                       key={item.name}
                       href={item.link}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={(e) => {
+                        setIsMobileMenuOpen(false);
+                        handleNavClick(e, item.link);
+                      }}
                       className="relative text-sm font-rowan-light text-white/80 hover:text-white py-1 transition-colors tracking-wide group w-fit"
                       style={{
                         fontFamily: "'Rowan-Light', serif",

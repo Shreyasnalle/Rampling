@@ -1,6 +1,6 @@
 "use client";
-
-import { motion } from "motion/react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import Aurora from "./Aurora";
 import BorderGlow from "@/components/BorderGlow";
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
@@ -8,6 +8,51 @@ import { TypewriterWord } from "@/components/ui/typewriter-effect";
 import { GooeyInput } from "@/components/ui/gooey-input";
 
 export default function BackgroundHero() {
+  const [emailStatus, setEmailStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [feedbackMessage, setFeedbackMessage] = useState<string>("");
+
+  const handleEmailSubmit = async (email: string) => {
+    if (!email || !email.includes("@")) {
+      setEmailStatus("error");
+      setFeedbackMessage("Please enter a valid email address.");
+      return;
+    }
+
+    setEmailStatus("loading");
+    setFeedbackMessage("");
+
+    try {
+      // Primary: call FastAPI backend directly if available, fallback to Next.js API route
+      let res: Response | null = null;
+      try {
+        res = await fetch("http://localhost:8000/api/send-welcome-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+      } catch (directErr) {
+        // Fallback to Next.js proxy route
+        res = await fetch("/api/send-welcome-email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || data.message || "Failed to send email");
+      }
+
+      setEmailStatus("success");
+      setFeedbackMessage("Welcome aboard! Check your inbox for your confirmation email.");
+    } catch (err: any) {
+      console.error("Failed to send welcome email:", err);
+      setEmailStatus("error");
+      setFeedbackMessage(err.message || "Could not send welcome email. Please try again.");
+    }
+  };
+
   return (
     <div className="relative w-full h-full min-h-screen flex items-center justify-center overflow-hidden bg-[#060608]">
       {/* Interactive Aurora WebGL Background Canvas */}
@@ -21,10 +66,10 @@ export default function BackgroundHero() {
       </div>
 
       {/* Centered Hero Content wrapped in BorderGlow */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-4 sm:px-6 py-20">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-3 sm:px-6 pt-20 sm:pt-24 lg:pt-20 pb-12 sm:pb-16 lg:pb-20">
         <motion.div
-          initial={{ y: 90, opacity: 0, width: "40%" }}
-          animate={{ y: 0, opacity: 1, width: "100%" }}
+          initial={{ y: 120, opacity: 0, scaleX: 0.4 }}
+          animate={{ y: 0, opacity: 1, scaleX: 1 }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           className="w-full flex justify-center origin-center"
         >
@@ -40,9 +85,9 @@ export default function BackgroundHero() {
             colors={['#c084fc', '#f472b6', '#38bdf8']}
             className="w-full"
           >
-            <div className="p-8 sm:p-12 md:p-14 text-center flex flex-col items-center justify-center">
+            <div className="p-5 sm:p-10 md:p-14 text-center flex flex-col items-center justify-center">
               <h1
-                className="text-balance text-3xl sm:text-5xl lg:text-6xl font-semibold text-white leading-[1.16] sm:leading-[1.14] font-rowan-semibold"
+                className="text-balance text-2xl sm:text-4xl lg:text-6xl font-semibold text-white leading-[1.16] sm:leading-[1.14] font-rowan-semibold"
                 style={{
                   fontFamily: "'Rowan-Semibold', serif",
                   fontVariantLigatures: 'none',
@@ -149,7 +194,36 @@ export default function BackgroundHero() {
                   Get Notified on Launch
                 </h3>
 
-                <GooeyInput placeholder="enter your email" />
+                <GooeyInput
+                  placeholder="enter your email"
+                  onSubmit={handleEmailSubmit}
+                  disabled={emailStatus === "loading"}
+                />
+
+                <AnimatePresence>
+                  {feedbackMessage && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.3 }}
+                      className={`text-xs sm:text-sm font-rowan-regular text-center max-w-md ${
+                        emailStatus === "success"
+                          ? "text-emerald-400"
+                          : emailStatus === "error"
+                          ? "text-rose-400"
+                          : "text-neutral-400"
+                      }`}
+                      style={{
+                        fontFamily: "'Rowan-Regular', serif",
+                        fontVariantLigatures: 'none',
+                        fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
+                      }}
+                    >
+                      {feedbackMessage}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </motion.div>
             </div>
           </BorderGlow>

@@ -1,8 +1,7 @@
 'use client';
 
-import React from 'react';
-import type { ComponentProps, ReactNode } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import React, { useRef } from 'react';
+import { motion, useInView } from 'motion/react';
 import Aurora from '@/pages/landingpage/Aurora';
 import GlassSurface from '@/components/GlassSurface';
 
@@ -62,8 +61,15 @@ const socialLinks: SocialLink[] = [
 ];
 
 export function Footer() {
+  const footerRef = useRef<HTMLElement>(null);
+  const isInView = useInView(footerRef, { once: true, amount: 0.2 });
+
   return (
-    <footer id="contact" className="relative w-full bg-[#060608] overflow-hidden text-neutral-200 min-h-[220px] md:min-h-[250px] flex flex-col justify-between pb-8 md:pb-10">
+    <footer
+      ref={footerRef}
+      id="contact"
+      className="relative w-full bg-[#060608] overflow-hidden text-neutral-200 min-h-[220px] md:min-h-[250px] flex flex-col justify-between pb-8 md:pb-10"
+    >
       {/* Starting divider line placed exactly on the top border of the footer */}
       <div
         className="w-full h-[1.5px] pointer-events-none z-30 shrink-0"
@@ -72,122 +78,182 @@ export function Footer() {
         }}
       />
 
-      {/* Rising Aurora WebGL Background Canvas from the bottom of footer */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rotate-180">
+      {/* 1. First raise the aurora from the bottom */}
+      <motion.div
+        initial={{ y: 90, opacity: 0 }}
+        animate={isInView ? { y: 0, opacity: 1 } : { y: 90, opacity: 0 }}
+        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rotate-180"
+      >
         <Aurora
           colorStops={["#7cff67", "#b497cf", "#5227ff"]}
           blend={0.5}
           amplitude={1}
           speed={0.5}
         />
-      </div>
+      </motion.div>
 
       {/* Ambient gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#060608] via-[#060608]/40 to-transparent pointer-events-none" />
 
       {/* Main Footer Container */}
       <div className="relative z-10 w-full max-w-5xl mx-auto px-6 sm:px-8 flex flex-col items-center justify-between gap-8 pt-10 md:pt-12">
-        {/* Top Row: Logo + Name on the left, Horizontal Social Links on the right */}
+        {/* 3. Top Row: Display the text with transition from left to right */}
         <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-6">
-          {/* Logo and Rampling brand name (no glow, no hover effect) */}
-          <AnimatedContainer className="flex items-center gap-3">
+          {/* Logo and Rampling brand name on the left (Rowan Bold) */}
+          <motion.div
+            initial={{ opacity: 0, x: -16, filter: "blur(8px)" }}
+            animate={isInView ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -16, filter: "blur(8px)" }}
+            transition={{ delay: 2.15, duration: 0.45, ease: "easeOut" }}
+            className="flex items-center gap-3 cursor-default select-none"
+          >
             <img
               src="/logo.png"
               alt="Rampling Logo"
-              className="size-8 rounded-lg object-contain"
+              className="size-8 rounded-lg object-contain pointer-events-none"
             />
             <span
-              className="text-xl font-semibold text-white tracking-tight font-rowan-medium"
+              className="text-xl font-bold text-white tracking-tight font-rowan-bold"
               style={{
-                fontFamily: "'Rowan-Medium', serif",
+                fontFamily: "'Rowan-Bold', 'Rowan-Semibold', serif",
+                fontWeight: 700,
                 fontVariantLigatures: 'none',
                 fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
               }}
             >
               Rampling
             </span>
-          </AnimatedContainer>
+          </motion.div>
 
-          {/* Social Links rendered horizontally */}
-          <AnimatedContainer delay={0.15} className="flex items-center gap-7">
-            {socialLinks.map((link) => (
-              <a
+          {/* Social Links on the right rendered with left-to-right transition (White color, Rowan Light) */}
+          <div className="flex items-center gap-7">
+            {socialLinks.map((link, idx) => (
+              <motion.a
                 key={link.title}
                 href={link.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-rowan-light text-sm text-neutral-400 hover:text-white inline-flex items-center gap-2 transition-colors duration-200 group"
+                initial={{ opacity: 0, x: -14, filter: "blur(8px)" }}
+                animate={isInView ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -14, filter: "blur(8px)" }}
+                transition={{
+                  delay: 2.35 + idx * 0.12,
+                  duration: 0.4,
+                  ease: "easeOut",
+                }}
+                className="font-rowan-light text-sm text-white hover:text-white/80 inline-flex items-center gap-2 transition-colors duration-200 group"
                 style={{
                   fontFamily: "'Rowan-Light', serif",
+                  fontWeight: 300,
                   fontVariantLigatures: 'none',
                   fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
                 }}
               >
-                <link.icon className="size-4 shrink-0 transition-transform group-hover:scale-110 duration-200" />
-                <span>{link.title}</span>
-              </a>
+                <link.icon className="size-4 shrink-0 transition-transform group-hover:scale-110 duration-200 text-white" />
+                <span className="text-white">{link.title}</span>
+              </motion.a>
             ))}
-          </AnimatedContainer>
+          </div>
         </div>
 
-        {/* Bottom Glass Pill: "Made with ❤️ by Shreyas Nalle" in GlassNavbar style */}
-        <AnimatedContainer delay={0.25} className="flex justify-center w-full pt-2">
-          <GlassSurface
-            width="fit-content"
-            height={44}
-            borderRadius={22}
-            displace={0.4}
-            distortionScale={-160}
-            redOffset={10}
-            greenOffset={100}
-            blueOffset={50}
-            brightness={75}
-            opacity={0.92}
-            backgroundOpacity={0.08}
-            blur={20}
-            mixBlendMode="screen"
-            className="shadow-[0_8px_32px_rgba(0,0,0,0.37)] border border-white/15 backdrop-blur-xl px-6 py-2 flex items-center justify-center"
+        {/* 2. Then raise the glassbar with heart first to its horizontal position, then expand it to show "Made with ❤️ by Shreyas Nalle" in Rowan Medium */}
+        <div className="flex justify-center w-full pt-2">
+          <motion.div
+            initial={{ y: 45, opacity: 0, width: 44 }}
+            animate={isInView ? { y: 0, opacity: 1, width: 252 } : { y: 45, opacity: 0, width: 44 }}
+            transition={{
+              y: { delay: 0.3, duration: 0.45, ease: "easeOut" },
+              opacity: { delay: 0.3, duration: 0.3, ease: "easeOut" },
+              width: { delay: 0.75, duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+            }}
+            className="flex justify-center mx-auto overflow-hidden rounded-[22px] min-w-0 max-w-[92vw]"
           >
-            <span
-              className="font-rowan-medium text-xs sm:text-sm text-white/90 tracking-normal inline-flex items-center gap-1.5 select-none"
-              style={{
-                fontFamily: "'Rowan-Medium', serif",
-                fontVariantLigatures: 'none',
-                fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
-              }}
+            <GlassSurface
+              width="100%"
+              height={44}
+              borderRadius={22}
+              displace={0.4}
+              distortionScale={-160}
+              redOffset={10}
+              greenOffset={100}
+              blueOffset={50}
+              brightness={75}
+              opacity={0.92}
+              backgroundOpacity={0.08}
+              blur={20}
+              mixBlendMode="screen"
+              className="shadow-[0_8px_32px_rgba(0,0,0,0.37)] border border-white/15 backdrop-blur-xl flex items-center justify-center w-full"
             >
-              Made with <span className="text-red-500 select-none">❤️</span> by Shreyas Nalle
-            </span>
-          </GlassSurface>
-        </AnimatedContainer>
+              <div className="flex items-center justify-center whitespace-nowrap select-none font-rowan-medium text-xs sm:text-sm text-white/95">
+                {/* Left wing: "Made with" reveals FIRST as the glassbar expands */}
+                <motion.div
+                  initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
+                  animate={
+                    isInView
+                      ? { opacity: 1, maxWidth: 85, x: 0, filter: "blur(0px)" }
+                      : { opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }
+                  }
+                  transition={{
+                    maxWidth: { delay: 0.75, duration: 0.4, ease: "easeOut" },
+                    opacity: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                    x: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                    filter: { delay: 0.95, duration: 0.35, ease: "easeOut" },
+                  }}
+                  className="overflow-hidden flex items-center justify-end shrink-0"
+                >
+                  <span
+                    className="font-rowan-medium text-xs sm:text-sm text-white/95 whitespace-nowrap pr-1.5 select-none"
+                    style={{
+                      fontFamily: "'Rowan-Medium', serif",
+                      fontWeight: 500,
+                      fontVariantLigatures: 'none',
+                      fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
+                    }}
+                  >
+                    Made with
+                  </span>
+                </motion.div>
+
+                {/* Center: Heart (always centered in compact 44px pill) */}
+                <div className="shrink-0 flex items-center justify-center select-none px-1">
+                  <span className="text-red-500 text-sm leading-none">
+                    ❤️
+                  </span>
+                </div>
+
+                {/* Right wing: "by Shreyas Nalle" reveals SECOND after "Made with" is settled */}
+                <motion.div
+                  initial={{ opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }}
+                  animate={
+                    isInView
+                      ? { opacity: 1, maxWidth: 135, x: 0, filter: "blur(0px)" }
+                      : { opacity: 0, maxWidth: 0, x: -10, filter: "blur(6px)" }
+                  }
+                  transition={{
+                    maxWidth: { delay: 0.8, duration: 0.4, ease: "easeOut" },
+                    opacity: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                    x: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                    filter: { delay: 1.45, duration: 0.35, ease: "easeOut" },
+                  }}
+                  className="overflow-hidden flex items-center justify-start shrink-0"
+                >
+                  <span
+                    className="font-rowan-medium text-xs sm:text-sm text-white/95 whitespace-nowrap pl-1.5 select-none"
+                    style={{
+                      fontFamily: "'Rowan-Medium', serif",
+                      fontWeight: 500,
+                      fontVariantLigatures: 'none',
+                      fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
+                    }}
+                  >
+                    by Shreyas Nalle
+                  </span>
+                </motion.div>
+              </div>
+            </GlassSurface>
+          </motion.div>
+        </div>
       </div>
     </footer>
-  );
-}
-
-type ViewAnimationProps = {
-  delay?: number;
-  className?: ComponentProps<typeof motion.div>['className'];
-  children: ReactNode;
-};
-
-function AnimatedContainer({ className, delay = 0.1, children }: ViewAnimationProps) {
-  const shouldReduceMotion = useReducedMotion();
-
-  if (shouldReduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
-  return (
-    <motion.div
-      initial={{ filter: 'blur(4px)', translateY: -6, opacity: 0 }}
-      whileInView={{ filter: 'blur(0px)', translateY: 0, opacity: 1 }}
-      viewport={{ once: true }}
-      transition={{ delay, duration: 0.6 }}
-      className={className}
-    >
-      {children}
-    </motion.div>
   );
 }
 
