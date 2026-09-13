@@ -86,14 +86,14 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
   children,
   className = '',
   edgeSensitivity = 30,
-  glowColor = '40 80 80',
+  glowColor = '29 40 55',
   backgroundColor = '#120F17',
   borderRadius = 28,
   glowRadius = 40,
   glowIntensity = 1.0,
   coneSpread = 25,
   animated = false,
-  colors = ['#c084fc', '#f472b6', '#38bdf8'],
+  colors = ['#AC8968', '#865D36', '#93785B', '#A69080', '#3E362E'],
   fillOpacity = 0.5,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -198,7 +198,7 @@ const BorderGlow: React.FC<BorderGlowProps> = ({
           border: '1px solid transparent',
           background: [
             `linear-gradient(${backgroundColor} 0 100%) padding-box`,
-            `linear-gradient(135deg, ${colors[0] || '#c084fc'}88, ${colors[1] || '#f472b6'}88, ${colors[2] || '#38bdf8'}88) border-box`,
+            `linear-gradient(135deg, ${colors[0] || '#AC8968'}88, ${colors[1] || '#865D36'}88, ${colors[2] || '#93785B'}88) border-box`,
           ].join(', '),
           opacity: isVisible ? 0.35 : 0.75,
         }}

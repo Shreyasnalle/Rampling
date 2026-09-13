@@ -1,4 +1,16 @@
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
+
+const EMAIL_BODY = `Hey, I am Shreyas, thanks for joining Rampling! It’s great to have you early on.
+
+At its core, Rampling is designed to take the guesswork out of your backend’s security and performance. Rampling will help you build faster, ship with confidence and ensure your applications effortlessly handle real-world scale.
+
+I'm reaching out to let you know that Rampling is currently in active development. Because you joined early you will be the very first to know the moment I launch, and you'll get early access too. 
+
+Thank you so much for believing in this project. If you have any thoughts, ideas, or specific challenges you’d love Rampling to solve, simply hit reply to this email, I’d genuinely love to hear from you.
+
+Warmly,
+Shreyas Nalle`;
 
 export async function POST(request: Request) {
   try {
@@ -12,36 +24,66 @@ export async function POST(request: Request) {
       );
     }
 
-    const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8000";
+    const gmailUser = (process.env.GMAIL_USER || "").trim().replace(/['"]/g, "");
+    const gmailAppPassword = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "").replace(/['"]/g, "").trim();
 
-    // Forward request to FastAPI email service
-    const response = await fetch(`${backendUrl}/api/send-welcome-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email: email.trim() }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
+    if (!gmailUser || !gmailAppPassword) {
       return NextResponse.json(
-        { detail: data.detail || data.message || "Failed to send email via backend service." },
-        { status: response.status }
+        {
+          detail:
+            "GMAIL_USER or GMAIL_APP_PASSWORD is not configured in the frontend environment variables.",
+        },
+        { status: 500 }
       );
     }
 
-    return NextResponse.json(data);
+    // Configure Nodemailer with Gmail service preset
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: gmailUser,
+        pass: gmailAppPassword,
+      },
+    });
+
+    const subject = "Welcome to Rampling";
+
+    // Simple, normal email without any custom CSS or complex styling
+    const simpleHtml = EMAIL_BODY.split("\n\n")
+      .map((paragraph) => `<p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">${paragraph.replace(/\n/g, "<br>")}</p>`)
+      .join("");
+
+    await transporter.sendMail({
+      from: `Rampling <${gmailUser}>`,
+      to: email.trim(),
+      subject,
+      text: EMAIL_BODY,
+      html: simpleHtml,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Welcome email sent successfully to ${email.trim()}`,
+    });
   } catch (error: any) {
-    console.error("Error in Next.js email proxy route:", error);
+    console.error("Error sending welcome email via Nodemailer:", error);
+
+    // Provide user-friendly diagnostic if authentication fails
+    if (error?.responseCode === 535 || error?.message?.includes("Invalid login")) {
+      return NextResponse.json(
+        {
+          detail:
+            "Gmail authentication failed. Please verify that 2-Step Verification is enabled and that you are using a valid 16-character Google App Password in GMAIL_APP_PASSWORD.",
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       {
-        detail:
-          error.message ||
-          "Could not connect to FastAPI email service at http://localhost:8000. Make sure the backend server is running.",
+        detail: error?.message || "Failed to send welcome email. Please try again.",
       },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }

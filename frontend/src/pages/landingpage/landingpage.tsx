@@ -12,7 +12,7 @@ export default function LandingPage() {
       {/* Main body content container */}
       <main className="w-full">
         {/* First div: BackgroundHero with Aurora component occupying whole page */}
-        <div className="relative w-full min-h-[100dvh] lg:h-screen flex flex-col justify-center bg-[#060608] py-8 sm:py-12 lg:py-0">
+        <div className="relative w-full min-h-[100dvh] lg:h-screen flex flex-col justify-center bg-[#060608]">
           <BackgroundHero />
         </div>
 

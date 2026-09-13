@@ -74,7 +74,8 @@ export function Footer() {
       <div
         className="w-full h-[1.5px] pointer-events-none z-30 shrink-0"
         style={{
-          background: 'linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.7) 20%, rgba(244, 114, 182, 0.7) 50%, rgba(56, 189, 248, 0.7) 80%, transparent)',
+          background:
+            'linear-gradient(90deg, transparent, #AC896890 20%, #865D3690 50%, #93785B90 80%, transparent)',
         }}
       />
 
@@ -86,7 +87,7 @@ export function Footer() {
         className="absolute inset-0 w-full h-full pointer-events-none overflow-hidden rotate-180"
       >
         <Aurora
-          colorStops={["#7cff67", "#b497cf", "#5227ff"]}
+          colorStops={['#AC8968', '#865D36', '#93785B']}
           blend={0.5}
           amplitude={1}
           speed={0.5}
@@ -140,7 +141,7 @@ export function Footer() {
                   duration: 0.4,
                   ease: "easeOut",
                 }}
-                className="font-rowan-light text-sm text-white hover:text-white/80 inline-flex items-center gap-2 transition-colors duration-200 group"
+                className="font-rowan-light text-sm text-white hover:text-[#AC8968] inline-flex items-center gap-2 transition-colors duration-200 group"
                 style={{
                   fontFamily: "'Rowan-Light', serif",
                   fontWeight: 300,
@@ -148,8 +149,8 @@ export function Footer() {
                   fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
                 }}
               >
-                <link.icon className="size-4 shrink-0 transition-transform group-hover:scale-110 duration-200 text-white" />
-                <span className="text-white">{link.title}</span>
+                <link.icon className="size-4 shrink-0 transition-transform group-hover:scale-110 duration-200 text-white group-hover:text-[#AC8968]" />
+                <span className="text-white group-hover:text-[#AC8968] transition-colors">{link.title}</span>
               </motion.a>
             ))}
           </div>
@@ -173,15 +174,15 @@ export function Footer() {
               borderRadius={22}
               displace={0.4}
               distortionScale={-160}
-              redOffset={10}
-              greenOffset={100}
-              blueOffset={50}
+              redOffset={50}
+              greenOffset={30}
+              blueOffset={10}
               brightness={75}
               opacity={0.92}
               backgroundOpacity={0.08}
               blur={20}
               mixBlendMode="screen"
-              className="shadow-[0_8px_32px_rgba(0,0,0,0.37)] border border-white/15 backdrop-blur-xl flex items-center justify-center w-full"
+              className="shadow-[0_8px_32px_rgba(0,0,0,0.37),0_0_16px_rgba(172,137,104,0.15)] border border-[#865D36]/40 hover:border-[#AC8968]/70 transition-colors backdrop-blur-xl flex items-center justify-center w-full"
             >
               <div className="flex items-center justify-center whitespace-nowrap select-none font-rowan-medium text-xs sm:text-sm text-white/95">
                 {/* Left wing: "Made with" reveals FIRST as the glassbar expands */}

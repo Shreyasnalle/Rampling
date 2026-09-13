@@ -59,7 +59,11 @@ function FeatureColumn({
               initial={{ scaleX: 0 }}
               animate={{ scaleX: bordersVisible ? 1 : 0 }}
               transition={{ duration: 0.4, ease: "easeOut" }}
-              className="absolute top-0 inset-x-0 h-[1px] bg-white/25 origin-left pointer-events-none"
+              className="absolute top-0 inset-x-0 h-[1px] origin-left pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent, #AC896860 15%, #865D3660 50%, #93785B60 85%, transparent)',
+              }}
             />
           )}
 
@@ -184,8 +188,10 @@ export default function ChromaticImageBentoFeaturesDemo({
     return () => clearInterval(timer);
   }, [isMobile, allFeatures.length]);
 
-  // Manual scroll listener
+  // Manual scroll listener (desktop only)
   useEffect(() => {
+    if (isMobile) return;
+
     let ticking = false;
 
     const updateScroll = () => {
@@ -217,11 +223,11 @@ export default function ChromaticImageBentoFeaturesDemo({
     return () => {
       window.removeEventListener("scroll", onScroll);
     };
-  }, [isAutoPlaying]);
+  }, [isMobile, isAutoPlaying]);
 
-  // Lock user scrolling during auto transition
+  // Lock user scrolling during auto transition (desktop only)
   useEffect(() => {
-    if (!isAutoPlaying) return;
+    if (!isAutoPlaying || isMobile) return;
 
     const preventDefault = (e: Event) => {
       e.preventDefault();
@@ -243,7 +249,7 @@ export default function ChromaticImageBentoFeaturesDemo({
       window.removeEventListener("touchmove", preventDefault);
       window.removeEventListener("keydown", preventKeys);
     };
-  }, [isAutoPlaying]);
+  }, [isAutoPlaying, isMobile]);
 
   // Auto transition when user directly clicks "Features"
   useEffect(() => {
@@ -251,6 +257,13 @@ export default function ChromaticImageBentoFeaturesDemo({
       const el = sectionRef.current;
       if (!el) return;
 
+      // On mobile, keep it simple: smoothly scroll directly to the section without transition effects
+      if (isMobile) {
+        el.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+
+      // On PC and laptop: untouched full 4-phase choreographed scroll sequence
       const rect = el.getBoundingClientRect();
       const sectionTop = rect.top + window.scrollY;
       const windowH = window.innerHeight;
@@ -278,7 +291,6 @@ export default function ChromaticImageBentoFeaturesDemo({
         let p = 0;
         if (elapsed <= 550) {
           const t = elapsed / 550;
-          // easeOutCubic: snappy, responsive shrink
           p = (1 - Math.pow(1 - t, 3)) * 0.26;
         } else {
           const remainingT = (elapsed - 550) / (duration - 550);
@@ -307,37 +319,22 @@ export default function ChromaticImageBentoFeaturesDemo({
     return () => {
       window.removeEventListener("rampling:features-clicked", handleFeaturesTrigger);
     };
-  }, []);
+  }, [isMobile]);
 
   // Effective progress from auto play or manual scroll
   const effectiveProgress = isAutoPlaying ? autoProgress : scrollProgress;
 
-  // Strict 4-phase sequence:
-  // Phase 1 (0.00 -> 0.24): Div shrinks from 80% to original size.
-  const shrinkFactor = Math.min(Math.max(effectiveProgress / 0.24, 0), 1);
-
-  // Phase 2 (0.24 -> 0.48): Internal borders appear from left to right.
-  const bordersVisible = effectiveProgress >= 0.24;
-
-  // Phase 3 (0.48 -> 0.72): Texts & numbers appear from left to right.
-  const textVisible = effectiveProgress >= 0.48;
-
-  // Phase 4 (0.72 -> 1.00): Center image slowly and smoothly fades in last!
-  const imageVisible = effectiveProgress >= 0.72;
-
-  // Mount ChromaticImage once card reaches its original size (shrinkFactor >= 0.95)
-  // so WebGL canvas is never subjected to dimension distortion or crash
-  const isMountedAtFinalSize = shrinkFactor >= 0.95;
+  // On PC and laptop: strict 4-phase sequence. On mobile: all elements immediately visible with zero transitions
+  const shrinkFactor = isMobile ? 1 : Math.min(Math.max(effectiveProgress / 0.24, 0), 1);
+  const bordersVisible = isMobile ? true : effectiveProgress >= 0.24;
+  const textVisible = isMobile ? true : effectiveProgress >= 0.48;
+  const imageVisible = isMobile ? true : effectiveProgress >= 0.72;
+  const isMountedAtFinalSize = isMobile ? true : shrinkFactor >= 0.95;
 
   // Responsive dimensions:
   // On desktop: Starts at 80% width and 80% height, shrinks to original size (70vw / 70% x 70vh)
-  // On mobile: adapts smoothly to 94vw -> 92vw and 84vh -> 78vh for full mobile comfort
-  const currentWidth = isMobile
-    ? `calc(94vw - (94vw - 92vw) * ${shrinkFactor})`
-    : `calc(80vw - (80vw - min(70vw, 1100px)) * ${shrinkFactor})`;
-  const currentHeight = isMobile
-    ? `calc(84vh - (84vh - 78vh) * ${shrinkFactor})`
-    : `calc(80vh - (80vh - 70vh) * ${shrinkFactor})`;
+  const currentWidth = `calc(80vw - (80vw - min(70vw, 1100px)) * ${shrinkFactor})`;
+  const currentHeight = `calc(80vh - (80vh - 70vh) * ${shrinkFactor})`;
   const currentRadius = `${24 + 5.5 * shrinkFactor}px`;
   const innerRadius = 22 + 6 * shrinkFactor;
   const borderOpacity = Math.min(1, 0.7 + 0.3 * shrinkFactor);
@@ -345,51 +342,56 @@ export default function ChromaticImageBentoFeaturesDemo({
   return (
     <div
       ref={sectionRef}
-      className="relative w-full min-h-[320vh] bg-white"
+      className="relative w-full bg-white py-8 sm:py-10 lg:py-0 lg:min-h-[320vh] flex items-center justify-center lg:block"
       style={{ backgroundColor: "#ffffff" }}
     >
-      {/* Sticky viewport container - keeps screen locked in place while transition takes place */}
-      <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden bg-white">
-        {/* Content div that shrinks from 80% width/height to original size */}
+      {/* Viewport container: simple in-flow on mobile, sticky top-0 on PC/laptop */}
+      <div className="relative w-full flex items-center justify-center bg-white lg:sticky lg:top-0 lg:h-screen lg:overflow-hidden">
+        {/* Content div: simple static layout on mobile, dynamic shrink on PC/laptop */}
         <div
-          className={`relative p-[1.5px] transition-all duration-75 flex items-center justify-center ${className ?? ""}`}
+          className={`relative ${isMobile ? "p-0" : "p-[1.5px]"} transition-all duration-75 flex items-center justify-center ${className ?? ""}`}
           style={{
-            width: currentWidth,
-            height: currentHeight,
-            borderRadius: currentRadius,
-            background: `linear-gradient(135deg, rgba(192, 132, 252, ${borderOpacity}) 0%, rgba(244, 114, 182, ${borderOpacity}) 50%, rgba(56, 189, 248, ${borderOpacity}) 100%)`,
-            boxShadow: `0 0 ${25 * borderOpacity}px rgba(192,132,252,${0.35 * borderOpacity}), 0 0 ${50 * borderOpacity}px rgba(56,189,248,${0.2 * borderOpacity}), 0 20px 50px rgba(0,0,0,${0.35 * borderOpacity})`,
+            width: isMobile ? "92vw" : currentWidth,
+            maxWidth: isMobile ? "460px" : undefined,
+            height: isMobile ? "auto" : currentHeight,
+            borderRadius: isMobile ? "24px" : currentRadius,
+            background: isMobile
+              ? "transparent"
+              : `linear-gradient(135deg, rgba(172, 137, 104, ${borderOpacity}) 0%, rgba(134, 93, 54, ${borderOpacity}) 35%, rgba(147, 120, 91, ${borderOpacity}) 70%, rgba(166, 144, 128, ${borderOpacity}) 100%)`,
+            boxShadow: isMobile
+              ? "0 12px 36px -8px rgba(0,0,0,0.3)"
+              : `0 0 ${25 * borderOpacity}px rgba(172, 137, 104, ${0.35 * borderOpacity}), 0 0 ${55 * borderOpacity}px rgba(134, 93, 54, ${0.25 * borderOpacity}), 0 25px 60px rgba(62, 54, 46, ${0.45 * borderOpacity})`,
           }}
         >
           <BorderGlow
             edgeSensitivity={30}
-            glowColor="40 80 80"
+            glowColor="29 40 55"
             backgroundColor="#000000"
-            borderRadius={innerRadius}
-            glowRadius={40}
-            glowIntensity={borderOpacity}
+            borderRadius={isMobile ? 24 : innerRadius}
+            glowRadius={isMobile ? 20 : 40}
+            glowIntensity={isMobile ? 0.8 : borderOpacity}
             coneSpread={25}
             animated={false}
-            colors={["#c084fc", "#f472b6", "#38bdf8"]}
-            className="w-full h-full"
+            colors={['#AC8968', '#865D36', '#93785B', '#A69080', '#3E362E']}
+            className="w-full h-auto lg:h-full"
           >
             <section
-              className="flex flex-col h-full w-full overflow-hidden text-white bg-black"
+              className="flex flex-col h-auto lg:h-full w-full overflow-hidden text-white bg-black"
               style={{
                 backgroundColor: "#000000",
-                borderRadius: `${innerRadius}px`,
+                borderRadius: isMobile ? "24px" : `${innerRadius}px`,
               }}
             >
               {/* Header */}
               <div className="relative shrink-0 px-5 sm:px-6 py-3.5 sm:py-4 bg-black">
                 <motion.p
-                  initial={{ opacity: 0, x: -16, filter: "blur(8px)" }}
+                  initial={isMobile ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -16, filter: "blur(8px)" }}
                   animate={{
                     opacity: textVisible ? 1 : 0,
                     x: textVisible ? 0 : -16,
                     filter: textVisible ? "blur(0px)" : "blur(8px)",
                   }}
-                  transition={{
+                  transition={isMobile ? { duration: 0 } : {
                     duration: 0.45,
                     delay: textVisible ? 0.05 : 0,
                     ease: "easeOut",
@@ -404,13 +406,13 @@ export default function ChromaticImageBentoFeaturesDemo({
                   This is how Rampling works
                 </motion.p>
                 <motion.h3
-                  initial={{ opacity: 0, x: -16, filter: "blur(8px)" }}
+                  initial={isMobile ? { opacity: 1, x: 0, filter: "blur(0px)" } : { opacity: 0, x: -16, filter: "blur(8px)" }}
                   animate={{
                     opacity: textVisible ? 1 : 0,
                     x: textVisible ? 0 : -16,
                     filter: textVisible ? "blur(0px)" : "blur(8px)",
                   }}
-                  transition={{
+                  transition={isMobile ? { duration: 0 } : {
                     duration: 0.45,
                     delay: textVisible ? 0.12 : 0,
                     ease: "easeOut",
@@ -425,12 +427,16 @@ export default function ChromaticImageBentoFeaturesDemo({
                   Workflow
                 </motion.h3>
 
-                {/* Horizontal divider line under header (Step 1: Lines from left to right) */}
+                {/* Horizontal divider line under header */}
                 <motion.div
-                  initial={{ scaleX: 0 }}
+                  initial={isMobile ? { scaleX: 1 } : { scaleX: 0 }}
                   animate={{ scaleX: bordersVisible ? 1 : 0 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="absolute bottom-0 inset-x-0 h-[1px] bg-white/25 origin-left pointer-events-none"
+                  transition={isMobile ? { duration: 0 } : { duration: 0.5, ease: "easeOut" }}
+                  className="absolute bottom-0 inset-x-0 h-[1px] origin-left pointer-events-none"
+                  style={{
+                    background:
+                      'linear-gradient(90deg, transparent, #AC896860 15%, #865D3660 50%, #93785B60 85%, transparent)',
+                  }}
                 />
               </div>
 
@@ -454,7 +460,11 @@ export default function ChromaticImageBentoFeaturesDemo({
                       delay: bordersVisible ? 0.1 : 0,
                       ease: "easeOut",
                     }}
-                    className="hidden lg:block absolute right-0 inset-y-0 w-[1px] bg-white/25 origin-top pointer-events-none"
+                    className="hidden lg:block absolute right-0 inset-y-0 w-[1px] origin-top pointer-events-none"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, transparent, #AC896860 15%, #865D3660 50%, #93785B60 85%, transparent)',
+                    }}
                   />
                 </div>
 
@@ -475,7 +485,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                   >
                     {isMountedAtFinalSize && (
                       <ChromaticImage
-                        src="/images/aurora.webp"
+                        src="/images/ember-aurora.jpg"
                         alt="Aurora"
                         backgroundColor="#000000"
                         zoom={0}
@@ -499,7 +509,11 @@ export default function ChromaticImageBentoFeaturesDemo({
                       delay: bordersVisible ? 0.2 : 0,
                       ease: "easeOut",
                     }}
-                    className="hidden lg:block absolute left-0 inset-y-0 w-[1px] bg-white/25 origin-top pointer-events-none"
+                    className="hidden lg:block absolute left-0 inset-y-0 w-[1px] origin-top pointer-events-none"
+                    style={{
+                      background:
+                        'linear-gradient(180deg, transparent, #AC896860 15%, #865D3660 50%, #93785B60 85%, transparent)',
+                    }}
                   />
 
                   <FeatureColumn
@@ -514,10 +528,10 @@ export default function ChromaticImageBentoFeaturesDemo({
               {/* Mobile View: Clean tabbed showcase with image preview & active feature (no nested scrollbars!) */}
               <div className="flex flex-col flex-1 min-h-0 lg:hidden justify-between p-3.5 sm:p-5 bg-black gap-2">
                 {/* Compact Image Banner */}
-                <div className="relative h-24 sm:h-32 w-full rounded-xl overflow-hidden border border-white/15 bg-black/60 shrink-0">
+                <div className="relative h-24 sm:h-32 w-full rounded-xl overflow-hidden border border-[#93785B]/35 bg-black/60 shrink-0">
                   {isMountedAtFinalSize ? (
                     <ChromaticImage
-                      src="/images/aurora.webp"
+                      src="/images/ember-aurora.jpg"
                       alt="Aurora"
                       backgroundColor="#000000"
                       zoom={0}
@@ -528,7 +542,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                     />
                   ) : (
                     <img
-                      src="/images/aurora.webp"
+                      src="/images/ember-aurora.jpg"
                       alt="Aurora Preview"
                       className="h-full w-full object-cover opacity-60"
                     />
@@ -548,12 +562,12 @@ export default function ChromaticImageBentoFeaturesDemo({
                       onClick={() => setActiveMobileFeature(idx)}
                       className={`py-1.5 px-1.5 rounded-lg text-xs font-rowan-medium transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border ${
                         activeMobileFeature === idx
-                          ? "bg-white/15 text-white border-white/30 shadow-[0_0_12px_rgba(192,132,252,0.3)]"
+                          ? "bg-[#865D36]/25 text-white border-[#AC8968]/60 shadow-[0_0_12px_rgba(172,137,104,0.35)]"
                           : "bg-white/5 text-neutral-400 border-white/10 hover:text-white"
                       }`}
                       style={{ fontFamily: "'Rowan-Medium', serif" }}
                     >
-                      <span className="text-[10px] tracking-wider text-purple-300">
+                      <span className="text-[10px] tracking-wider text-[#AC8968]">
                         {feat.number}
                       </span>
                       <span className="truncate max-w-full text-[10px] sm:text-[11px]">
@@ -564,7 +578,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                 </div>
 
                 {/* Active Feature Details Card */}
-                <div className="relative flex-1 min-h-[110px] flex flex-col justify-center bg-white/[0.03] border border-white/10 rounded-xl p-3.5 sm:p-4 overflow-hidden">
+                <div className="relative flex-1 min-h-[110px] flex flex-col justify-center bg-white/[0.03] border border-[#93785B]/30 rounded-xl p-3.5 sm:p-4 overflow-hidden">
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={activeMobileFeature}
@@ -606,7 +620,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                         key={idx}
                         className={`h-1.5 rounded-full transition-all duration-300 ${
                           activeMobileFeature === idx
-                            ? "w-4 bg-gradient-to-r from-purple-400 to-pink-400"
+                            ? "w-4 bg-gradient-to-r from-[#AC8968] to-[#865D36]"
                             : "w-1.5 bg-white/20"
                         }`}
                       />
@@ -620,7 +634,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                           prev === 0 ? allFeatures.length - 1 : prev - 1
                         )
                       }
-                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs px-2"
+                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-[#93785B]/30 hover:border-[#AC8968] text-xs px-2"
                       aria-label="Previous feature"
                     >
                       ←
@@ -632,7 +646,7 @@ export default function ChromaticImageBentoFeaturesDemo({
                           prev === allFeatures.length - 1 ? 0 : prev + 1
                         )
                       }
-                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-white/10 text-xs px-2"
+                      className="p-1 rounded-md bg-white/10 text-white/80 hover:text-white border border-[#93785B]/30 hover:border-[#AC8968] text-xs px-2"
                       aria-label="Next feature"
                     >
                       →

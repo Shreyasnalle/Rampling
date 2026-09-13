@@ -15,29 +15,18 @@ export default function BackgroundHero() {
     if (!email || !email.includes("@")) {
       setEmailStatus("error");
       setFeedbackMessage("Please enter a valid email address.");
-      return;
+      throw new Error("Invalid email");
     }
 
     setEmailStatus("loading");
     setFeedbackMessage("");
 
     try {
-      // Primary: call FastAPI backend directly if available, fallback to Next.js API route
-      let res: Response | null = null;
-      try {
-        res = await fetch("http://localhost:8000/api/send-welcome-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
-        });
-      } catch (directErr) {
-        // Fallback to Next.js proxy route
-        res = await fetch("/api/send-welcome-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
-        });
-      }
+      const res = await fetch("/api/send-welcome-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
 
       const data = await res.json();
       if (!res.ok) {
@@ -45,11 +34,13 @@ export default function BackgroundHero() {
       }
 
       setEmailStatus("success");
-      setFeedbackMessage("Welcome aboard! Check your inbox for your confirmation email.");
+      // Do not show confirmation message text below; GooeyInput displays green checkmark
+      setFeedbackMessage("");
     } catch (err: any) {
       console.error("Failed to send welcome email:", err);
       setEmailStatus("error");
       setFeedbackMessage(err.message || "Could not send welcome email. Please try again.");
+      throw err;
     }
   };
 
@@ -58,7 +49,7 @@ export default function BackgroundHero() {
       {/* Interactive Aurora WebGL Background Canvas */}
       <div className="absolute inset-0 w-full h-full pointer-events-none">
         <Aurora
-          colorStops={["#7cff67", "#b497cf", "#5227ff"]}
+          colorStops={['#AC8968', '#865D36', '#93785B']}
           blend={0.5}
           amplitude={1.5}
           speed={0.5}
@@ -66,7 +57,7 @@ export default function BackgroundHero() {
       </div>
 
       {/* Centered Hero Content wrapped in BorderGlow */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-3 sm:px-6 pt-20 sm:pt-24 lg:pt-20 pb-12 sm:pb-16 lg:pb-20">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-3.5 sm:px-6 pt-28 sm:pt-32 lg:pt-20 pb-12 sm:pb-16 lg:pb-20">
         <motion.div
           initial={{ y: 120, opacity: 0, scaleX: 0.4 }}
           animate={{ y: 0, opacity: 1, scaleX: 1 }}
@@ -75,14 +66,14 @@ export default function BackgroundHero() {
         >
           <BorderGlow
             edgeSensitivity={30}
-            glowColor="40 80 80"
+            glowColor="29 40 55"
             backgroundColor="#120F17"
             borderRadius={28}
             glowRadius={40}
             glowIntensity={1}
             coneSpread={25}
             animated={false}
-            colors={['#c084fc', '#f472b6', '#38bdf8']}
+            colors={['#AC8968', '#865D36', '#93785B', '#A69080', '#3E362E']}
             className="w-full"
           >
             <div className="p-5 sm:p-10 md:p-14 text-center flex flex-col items-center justify-center">
@@ -123,11 +114,11 @@ export default function BackgroundHero() {
                           startDelay={1350}
                           className="inline-block text-transparent bg-clip-text"
                           style={{
-                            backgroundImage: "linear-gradient(to right, #7cff67, #B497CF, #5227FF)",
+                            backgroundImage: "linear-gradient(to right, #AC8968, #865D36, #93785B, #A69080)",
                             WebkitBackgroundClip: "text",
                             WebkitTextFillColor: "transparent",
                           }}
-                          cursorClassName="bg-[#7cff67] shadow-[0_0_8px_#7cff67]"
+                          cursorClassName="bg-[#AC8968] shadow-[0_0_8px_#AC8968]"
                         />
                       </span>
                     ) : (
@@ -147,7 +138,7 @@ export default function BackgroundHero() {
                 transition={{ delay: 1.85, duration: 0.75, ease: "easeOut" }}
                 className="my-6 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
                 style={{
-                  background: 'linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.45) 25%, rgba(244, 114, 182, 0.45) 50%, rgba(56, 189, 248, 0.45) 75%, transparent)',
+                  background: 'linear-gradient(90deg, transparent, #AC896870 25%, #865D3670 50%, #93785B70 75%, transparent)',
                 }}
               />
 
@@ -172,7 +163,7 @@ export default function BackgroundHero() {
                 transition={{ delay: 3.0, duration: 0.75, ease: "easeOut" }}
                 className="my-6 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
                 style={{
-                  background: 'linear-gradient(90deg, transparent, rgba(192, 132, 252, 0.45) 25%, rgba(244, 114, 182, 0.45) 50%, rgba(56, 189, 248, 0.45) 75%, transparent)',
+                  background: 'linear-gradient(90deg, transparent, #AC896870 25%, #865D3670 50%, #93785B70 75%, transparent)',
                 }}
               />
 
@@ -201,19 +192,13 @@ export default function BackgroundHero() {
                 />
 
                 <AnimatePresence>
-                  {feedbackMessage && (
+                  {feedbackMessage && emailStatus === "error" && (
                     <motion.p
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -6 }}
                       transition={{ duration: 0.3 }}
-                      className={`text-xs sm:text-sm font-rowan-regular text-center max-w-md ${
-                        emailStatus === "success"
-                          ? "text-emerald-400"
-                          : emailStatus === "error"
-                          ? "text-rose-400"
-                          : "text-neutral-400"
-                      }`}
+                      className="text-xs sm:text-sm font-rowan-regular text-center max-w-md text-rose-400"
                       style={{
                         fontFamily: "'Rowan-Regular', serif",
                         fontVariantLigatures: 'none',

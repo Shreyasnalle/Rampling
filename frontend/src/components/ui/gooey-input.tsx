@@ -159,11 +159,13 @@ export function GooeyInput({
   const iconLayoutId = `gooey-input-icon-${safeId}`;
   const inputLayoutId = `gooey-input-field-${safeId}`;
 
+  const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevExpandedRef = useRef(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [uncontrolledValue, setUncontrolledValue] = useState(defaultValue);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isControlled = valueProp !== undefined;
   const emailText = isControlled ? valueProp : uncontrolledValue;
@@ -186,6 +188,30 @@ export function GooeyInput({
     [onOpenChange],
   );
 
+  // Close and revert to original mail logo and email button on click outside
+  useEffect(() => {
+    if (!isExpanded) return;
+
+    const handlePointerDownOutside = (event: MouseEvent | TouchEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setExpanded(false);
+        setEmailText("");
+        setIsSubmitted(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDownOutside);
+    document.addEventListener("touchstart", handlePointerDownOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDownOutside);
+      document.removeEventListener("touchstart", handlePointerDownOutside);
+    };
+  }, [isExpanded, setExpanded, setEmailText]);
+
   useEffect(() => {
     if (isExpanded) {
       inputRef.current?.focus();
@@ -207,20 +233,44 @@ export function GooeyInput({
     [setEmailText],
   );
 
-  const handleBlur = useCallback(() => {
-    if (!emailText && !isSubmitted) {
-      setExpanded(false);
-    }
-  }, [emailText, isSubmitted, setExpanded]);
+  const handleBlur = useCallback(
+    (e: React.FocusEvent<HTMLInputElement>) => {
+      if (
+        containerRef.current &&
+        e.relatedTarget &&
+        containerRef.current.contains(e.relatedTarget as Node)
+      ) {
+        return;
+      }
+      if (isSubmitted || isSubmitting) return;
 
-  const handleSubmit = useCallback(() => {
-    if (disabled || !emailText) return;
-    setIsSubmitted(true);
-    onSubmit?.(emailText);
-    setTimeout(() => {
+      setExpanded(false);
+      setEmailText("");
       setIsSubmitted(false);
-    }, 2500);
-  }, [disabled, emailText, onSubmit]);
+    },
+    [isSubmitted, isSubmitting, setExpanded, setEmailText],
+  );
+
+  const handleSubmit = useCallback(async () => {
+    if (disabled || isSubmitting || !emailText) return;
+    setIsSubmitting(true);
+    try {
+      if (onSubmit) {
+        await Promise.resolve(onSubmit(emailText));
+      }
+      setIsSubmitted(true);
+      // Keep green tick mark visible, then close and revert back to original state
+      setTimeout(() => {
+        setExpanded(false);
+        setEmailText("");
+        setIsSubmitted(false);
+        setIsSubmitting(false);
+      }, 1600);
+    } catch {
+      setIsSubmitting(false);
+      setIsSubmitted(false);
+    }
+  }, [disabled, isSubmitting, emailText, onSubmit, setExpanded, setEmailText]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -249,10 +299,11 @@ export function GooeyInput({
   );
 
   const surfaceClass =
-    "bg-[#16121e] text-white border-2 border-[#685c82] shadow-[0_2px_12px_rgba(0,0,0,0.5)]";
+    "bg-[#151210] text-white border-2 border-[#865D36] shadow-[0_2px_12px_rgba(0,0,0,0.5)]";
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         "relative flex items-center justify-center select-none",
         className,
@@ -307,12 +358,13 @@ export function GooeyInput({
             disabled={disabled}
             onClick={handleExpand}
             className={cn(
-              "flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-rowan-light outline-none transition-[color,border-color,background-color] hover:border-[#7e709c] focus-visible:ring-2 focus-visible:ring-purple-400 focus-visible:ring-offset-2",
+              "flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-rowan-light font-light outline-none transition-[color,border-color,background-color] hover:border-[#AC8968] focus-visible:ring-2 focus-visible:ring-[#AC8968] focus-visible:ring-offset-2",
               surfaceClass,
               classNames?.trigger,
             )}
             style={{
-              fontFamily: "'Rowan-Light', serif",
+              fontFamily: "'Rowan-Light', 'Rowan', serif",
+              fontWeight: 300,
               fontVariantLigatures: "none",
               fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
             }}
@@ -334,14 +386,15 @@ export function GooeyInput({
               disabled={disabled || !isExpanded}
               placeholder={isExpanded ? placeholder : "email"}
               className={cn(
-                "h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none font-rowan-light tracking-wide",
+                "h-full min-w-0 flex-1 bg-transparent text-sm text-white outline-none font-rowan-light font-light tracking-wide",
                 isExpanded
                   ? "placeholder:text-neutral-400 cursor-text"
                   : "pointer-events-none placeholder:text-neutral-200 cursor-pointer text-center",
                 classNames?.input,
               )}
               style={{
-                fontFamily: "'Rowan-Light', serif",
+                fontFamily: "'Rowan-Light', 'Rowan', serif",
+                fontWeight: 300,
                 fontVariantLigatures: "none",
                 fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
               }}
@@ -369,8 +422,8 @@ export function GooeyInput({
               "flex size-10 cursor-pointer items-center justify-center rounded-full transition-all duration-200",
               surfaceClass,
               isSubmitted
-                ? "bg-emerald-600 text-white ring-emerald-500 hover:bg-emerald-700 border-emerald-500"
-                : "hover:bg-[#201a2d] hover:border-[#8574a6] hover:scale-105 active:scale-95",
+                ? "bg-emerald-600 text-white ring-emerald-500 hover:bg-emerald-700 border-[#AC8968]"
+                : "hover:bg-[#261E18] hover:border-[#AC8968] hover:scale-105 active:scale-95",
               classNames?.bubbleSurface,
             )}
           >
