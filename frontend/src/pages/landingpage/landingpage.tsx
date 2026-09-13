@@ -27,9 +27,7 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full">
-        <AppFooter />
-      </footer>
+      <AppFooter />
     </div>
   );
 }
