@@ -12,6 +12,9 @@ Thank you so much for believing in this project. If you have any thoughts, ideas
 Warmly,
 Shreyas Nalle`;
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -28,6 +31,12 @@ export async function POST(request: Request) {
     const gmailAppPassword = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "").replace(/['"]/g, "").trim();
 
     if (!gmailUser || !gmailAppPassword) {
+      console.error("[Email API] Missing Gmail credentials in environment variables:", {
+        hasUser: Boolean(gmailUser),
+        userLength: gmailUser.length,
+        hasPassword: Boolean(gmailAppPassword),
+        passwordLength: gmailAppPassword.length,
+      });
       return NextResponse.json(
         {
           detail:
