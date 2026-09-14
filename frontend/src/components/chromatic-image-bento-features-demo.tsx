@@ -47,11 +47,11 @@ function FeatureColumn({
   baseDelay?: number;
 }) {
   return (
-    <dl className="grid h-full grid-rows-2 relative">
+    <dl className="flex flex-col h-full relative">
       {features.map((feature, idx) => (
         <div
           key={feature.number}
-          className="relative flex min-h-36 flex-col justify-between gap-4 p-6 sm:p-8"
+          className="relative flex flex-1 min-h-0 flex-col justify-between gap-3 p-5 lg:p-6 xl:p-8 overflow-hidden"
         >
           {/* Animated divider line between rows */}
           {idx > 0 && (
@@ -118,10 +118,9 @@ function FeatureColumn({
               delay: textVisible ? baseDelay + idx * 0.12 + 0.06 : 0,
               ease: "easeOut",
             }}
-            className="font-rowan-light max-w-[40ch] text-pretty text-[15px] leading-relaxed text-neutral-300 font-light"
+            className="font-rowan-light max-w-[40ch] text-pretty text-[13px] xl:text-[14px] leading-relaxed text-neutral-300 font-light line-clamp-4"
             style={{
               fontFamily: "'Rowan-Light', serif",
-              fontSize: "14px",
               fontVariantLigatures: "none",
               fontFeatureSettings: '"calt" 0, "liga" 0, "dlig" 0',
             }}
@@ -334,7 +333,7 @@ export default function ChromaticImageBentoFeaturesDemo({
   // Responsive dimensions:
   // On desktop: Starts at 80% width and 80% height, shrinks to original size (70vw / 70% x 70vh)
   const currentWidth = `calc(80vw - (80vw - min(70vw, 1100px)) * ${shrinkFactor})`;
-  const currentHeight = `calc(80vh - (80vh - 70vh) * ${shrinkFactor})`;
+  const currentHeight = `calc(85vh - (85vh - 75vh) * ${shrinkFactor})`;
   const currentRadius = `${24 + 5.5 * shrinkFactor}px`;
   const innerRadius = 22 + 6 * shrinkFactor;
   const borderOpacity = Math.min(1, 0.7 + 0.3 * shrinkFactor);
