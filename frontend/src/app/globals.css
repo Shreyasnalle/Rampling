@@ -130,6 +130,7 @@
   font-feature-settings: "calt" 0, "liga" 0, "dlig" 0;
 }
 
+/* Hide scrollbar across all browsers while retaining full scroll functionality */
 html,
 body {
   margin: 0;
@@ -137,6 +138,21 @@ body {
   min-height: 100vh;
   background-color: #ffffff;
   font-family: 'Stardom-Regular', sans-serif;
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+/* Hide scrollbar for Chrome, Safari, Opera and all webkit browsers */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+* {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 @theme inline {

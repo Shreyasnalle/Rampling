@@ -37,13 +37,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Configure Nodemailer with Gmail service preset
+    // Configure Nodemailer with direct SSL on port 465 (required for reliable delivery on Vercel/serverless cloud hosts)
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
         user: gmailUser,
         pass: gmailAppPassword,
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
     });
 
     const subject = "Welcome to Rampling";

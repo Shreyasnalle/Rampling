@@ -67,7 +67,7 @@ export default function BackgroundHero() {
           <BorderGlow
             edgeSensitivity={30}
             glowColor="29 40 55"
-            backgroundColor="#120F17"
+            backgroundColor="#151210"
             borderRadius={28}
             glowRadius={40}
             glowIntensity={1}

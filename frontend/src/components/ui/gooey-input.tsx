@@ -282,20 +282,39 @@ export function GooeyInput({
     [handleSubmit],
   );
 
+  const [availableWidth, setAvailableWidth] = useState<number>(expandedWidth + 104);
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (typeof window === "undefined") return;
+      const screenW = window.innerWidth;
+      // On mobile (screen < 640px), clamp expanded container so it stays well within card boundaries
+      const maxContainerW =
+        screenW < 640
+          ? Math.min(expandedWidth + 104, Math.max(250, screenW - 84))
+          : expandedWidth + 104;
+      setAvailableWidth(maxContainerW);
+    };
+
+    updateWidth();
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }, [expandedWidth]);
+
   const containerVariants = useMemo(
     () => ({
       collapsed: { width: collapsedWidth },
-      expanded: { width: expandedWidth + 104 }, // space for left (40px) + right (40px) + gaps
+      expanded: { width: availableWidth },
     }),
-    [collapsedWidth, expandedWidth],
+    [collapsedWidth, availableWidth],
   );
 
   const buttonVariants = useMemo(
     () => ({
       collapsed: { width: collapsedWidth },
-      expanded: { width: expandedWidth },
+      expanded: { width: Math.max(140, availableWidth - 104) },
     }),
-    [collapsedWidth, expandedWidth],
+    [collapsedWidth, availableWidth],
   );
 
   const surfaceClass =
