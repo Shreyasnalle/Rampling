@@ -57,7 +57,7 @@ export default function BackgroundHero() {
       </div>
 
       {/* Centered Hero Content wrapped in BorderGlow */}
-      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-3.5 sm:px-6 pt-28 sm:pt-32 lg:pt-28 pb-12 sm:pb-16 lg:pb-12">
+      <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-5xl mx-auto px-3.5 sm:px-6 pt-28 sm:pt-32 lg:pt-20 pb-12 sm:pb-16 lg:pb-8">
         <motion.div
           initial={{ y: 120, opacity: 0, scaleX: 0.4 }}
           animate={{ y: 0, opacity: 1, scaleX: 1 }}
@@ -76,7 +76,7 @@ export default function BackgroundHero() {
             colors={['#AC8968', '#865D36', '#93785B', '#A69080', '#3E362E']}
             className="w-full"
           >
-            <div className="p-5 sm:p-10 md:p-14 text-center flex flex-col items-center justify-center min-h-[365px] sm:min-h-0">
+            <div className="p-5 sm:p-10 md:p-12 lg:p-10 text-center flex flex-col items-center justify-center min-h-[365px] sm:min-h-0">
               <h1
                 className="text-balance text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-[1.16] sm:leading-[1.14] font-rowan-semibold min-h-[84px] sm:min-h-0"
                 style={{
@@ -136,7 +136,7 @@ export default function BackgroundHero() {
                 initial={{ scaleX: 0, opacity: 0 }}
                 animate={{ scaleX: 1, opacity: 1 }}
                 transition={{ delay: 1.85, duration: 0.75, ease: "easeOut" }}
-                className="my-6 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
+                className="my-6 lg:my-4 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
                 style={{
                   background: 'linear-gradient(90deg, transparent, #AC896870 25%, #865D3670 50%, #93785B70 75%, transparent)',
                 }}
@@ -145,7 +145,7 @@ export default function BackgroundHero() {
               <TextGenerateEffect
                 as="p"
                 words="Rampling maps every route in your repo, catches architectural bottlenecks, and simulates autonomous agentic load scenarios against staging in minutes. It isolates performance issues down to the exact code lines and prescribes surgical fixes before you ship."
-                className="max-w-3xl text-pretty text-sm sm:text-base md:text-base lg:text-lg text-white/85 leading-relaxed font-rowan-regular"
+                className="max-w-3xl text-pretty text-sm sm:text-base md:text-base lg:text-base text-white/85 leading-relaxed font-rowan-regular"
                 style={{
                   fontFamily: "'Rowan-Regular', serif",
                   fontVariantLigatures: 'none',
@@ -161,7 +161,7 @@ export default function BackgroundHero() {
                 initial={{ scaleX: 0, opacity: 0 }}
                 animate={{ scaleX: 1, opacity: 1 }}
                 transition={{ delay: 3.0, duration: 0.75, ease: "easeOut" }}
-                className="my-6 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
+                className="my-6 lg:my-4 h-[1px] w-full max-w-xs sm:max-w-sm pointer-events-none origin-left"
                 style={{
                   background: 'linear-gradient(90deg, transparent, #AC896870 25%, #865D3670 50%, #93785B70 75%, transparent)',
                 }}

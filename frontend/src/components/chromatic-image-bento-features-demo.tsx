@@ -469,6 +469,50 @@ export default function ChromaticImageBentoFeaturesDemo({
 
                 {/* Center Image Column (Step 3: Slow, smooth cinematic fade in) */}
                 <div className="order-1 flex h-full w-full items-center justify-center bg-black overflow-hidden lg:order-2 relative">
+                  {/* SCROLL cue — visible while center is black, fades out as image appears */}
+                  <motion.div
+                    animate={{
+                      opacity: imageVisible ? 0 : 1,
+                    }}
+                    transition={{
+                      duration: 0.9,
+                      ease: "easeOut",
+                    }}
+                    className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none select-none"
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      {/* Two arrows: down on left, up on right */}
+                      <div className="flex items-center gap-3">
+                        {/* Downward chevron */}
+                        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" className="opacity-70">
+                          <path
+                            d="M9 13.5L18 22.5L27 13.5"
+                            stroke="#AC8968"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        {/* Upward chevron */}
+                        <svg width="36" height="36" viewBox="0 0 36 36" fill="none" className="opacity-70">
+                          <path
+                            d="M9 22.5L18 13.5L27 22.5"
+                            stroke="#AC8968"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </div>
+                      <span
+                        className="text-[25px] tracking-[0.35em] uppercase text-white font-rowan-bold"
+                        style={{ fontFamily: "'Rowan-Bold', serif" }}
+                      >
+                        Scroll
+                      </span>
+                    </div>
+                  </motion.div>
+
                   <motion.div
                     initial={{ opacity: 0, filter: "blur(16px)", scale: 0.94 }}
                     animate={{
